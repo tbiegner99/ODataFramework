@@ -17,6 +17,7 @@ import org.odata4j.core.OEntityId;
 import org.odata4j.core.OEntityKey;
 import org.odata4j.core.OExtension;
 import org.odata4j.core.OFunctionParameter;
+import org.odata4j.core.OLink;
 import org.odata4j.core.OProperties;
 import org.odata4j.core.OProperty;
 import org.odata4j.core.OSimpleObject;
@@ -64,6 +65,7 @@ import com.tj.producer.configuration.AnnotationProducerConfiguration;
 import com.tj.producer.configuration.ProducerConfiguration;
 import com.tj.producer.configuration.ProducerConfiguration.Action;
 import com.tj.producer.configuration.ServiceProducerConfiguration;
+import com.tj.producer.util.ReflectionUtil;
 import com.tj.security.CompositeSecurityManager;
 import com.tj.security.FunctionSecurityManager;
 import com.tj.security.User;
@@ -206,7 +208,7 @@ public class GenericProducer implements ODataProducer {
 		Collection<? extends Object> objects = (Collection<? extends Object>) o;
 		List<OEntity> ret = new ArrayList<OEntity>();
 		for (Object item : objects) {
-			OEntity entity = OEntityConverter.createOEntity(getMetadata(), item, queryInfo);
+			OEntity entity = OEntityConverter.createOEntity(getMetadata(), item,type, queryInfo);
 			ret.add(entity);
 		}
 		Integer skipToken = (queryInfo.skip == null ? ret.size() : queryInfo.skip + ret.size());
@@ -249,7 +251,7 @@ public class GenericProducer implements ODataProducer {
 		if (o == null) {
 			throw new NotFoundException("No entity found with this id.");
 		}
-		OEntity response = OEntityConverter.createOEntity(getMetadata(), o, queryInfo);
+		OEntity response = OEntityConverter.createOEntity(getMetadata(), o,type, queryInfo);
 		return Responses.entity(response);
 	}
 
@@ -349,14 +351,40 @@ public class GenericProducer implements ODataProducer {
 	@Override
 	public void close() {
 	}
-
+	private Map<String, Object> getRelatedEntities(OEntity entity, EdmEntityType edmSet, ODataContext ocontext) {
+		Map<String, Object> relatedEntities=new HashMap<String,Object>();
+		//handle collections, handle inlined elements
+		for(OLink link : entity.getLinks()) {
+			String linkEntitySet=edmSet.findNavigationProperty(link.getRelation()).getToRole().getType().getName();
+			Class<?> linkType=cfg.getEntitySetClass(linkEntitySet);
+			if(link.isInline()) {
+				OEntity inlineEntity=link.getRelatedEntity();
+				Object relatedObject=OEntityConverter.oEntityToObject(inlineEntity, linkType);
+				relatedEntities.put(link.getRelation(), relatedObject);
+			} else {
+				OEntityKey key=OEntityConverter.getKeyFromHref(link.getHref());
+				RequestContext context = RequestContext.createRequestContext(ocontext, key, new QueryInfo(), linkType,
+								requestContext, securityManager, requestUser);
+				Object relatedObject=cfg.invoke(linkEntitySet, Action.GET, context, responseContext);
+				if(relatedObject==null) {
+					throw new NotFoundException("Object for property "+link.getRelation()+" does not exist: "+linkEntitySet+OEntityConverter.getKeyFromUrl(link.getHref()));
+				}
+				relatedEntities.put(link.getRelation(), relatedObject);
+			}
+		}
+		return relatedEntities;
+	}
 	@Override
 	public EntityResponse createEntity(ODataContext ocontext, String entitySetName, OEntity entity) {
 		Class<?> type = cfg.getEntitySetClass(entitySetName);
+		EdmEntityType edmSet=getMetadata().findEdmEntitySet(entitySetName).getType();
+
 		if (type == null) {
 			throw new NotFoundException();
 		}
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type);
+
+		Map<String, Object> relatedEntities=getRelatedEntities(entity, edmSet, ocontext);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, type,relatedEntities);
 		if (!canPerformEntityAcion(ocontext, Action.CREATE, type, entityObject)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
@@ -371,16 +399,33 @@ public class GenericProducer implements ODataProducer {
 	public EntityResponse createEntity(ODataContext ocontext, String entitySetName, OEntityKey entityKey,
 			String navProp, OEntity entity) {
 		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		if (type == null) {
+		EdmEntityType edmSet=getMetadata().findEdmEntitySet(entitySetName).getType();
+		EdmEntityType linkEntityType=edmSet.findNavigationProperty(navProp).getToRole().getType();
+		Class<?> linkType=cfg.getEntitySetClass(linkEntityType.getName());
+		if (type == null || linkType==null) {
 			throw new NotFoundException();
 		}
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type);
-		if (!canPerformEntityAcion(ocontext, Action.CREATE, type, entityObject)) {
+		//Get entity to update
+		RequestContext context = RequestContext.createRequestContext(ocontext, entityKey, new QueryInfo(), type,
+						requestContext, securityManager, requestUser);
+		Object entityToUpdate = cfg.invoke(entitySetName, Action.GET, context, responseContext);
+
+		//create linked entity
+		Map<String, Object> relatedEntities=getRelatedEntities(entity, linkEntityType, ocontext);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, linkType,relatedEntities);
+
+		if (!canPerformEntityAcion(ocontext, Action.CREATE, linkType, entityObject) ||
+			!canPerformEntityAcion(ocontext, Action.UPDATE, type, entityToUpdate)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
-		RequestContext context = RequestContext.createRequestContext(ocontext, entityObject, type, requestContext,
+		context = RequestContext.createRequestContext(ocontext, entityObject, linkType, requestContext,
+						securityManager, requestUser);
+		entityObject=cfg.invoke(linkEntityType.getName(), Action.CREATE, context, responseContext);
+		ReflectionUtil.invokeSetterOrAddToCollection(entityToUpdate, navProp,entityObject);
+		//update the entity
+		context = RequestContext.createRequestContext(ocontext, entityToUpdate, type, requestContext,
 				securityManager, requestUser);
-		Object o = cfg.invoke(entitySetName, Action.CREATE, context, responseContext);
+		Object o = cfg.invoke(entitySetName, Action.UPDATE, context, responseContext);
 		OEntity response = OEntityConverter.createOEntity(getMetadata(), o);
 		return Responses.entity(response);
 	}
@@ -400,25 +445,38 @@ public class GenericProducer implements ODataProducer {
 		return;
 
 	}
+	private void updateEntity(ODataContext ocontext, String entitySetName, OEntity entity,boolean isMerge) {
+		Class<?> type = cfg.getEntitySetClass(entitySetName);
+		Map<String, Object> relatedEntities=getRelatedEntities(entity, entity.getEntityType(), ocontext);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, type,relatedEntities);
 
+		if (!canPerformEntityAcion(ocontext, Action.UPDATE, type, entityObject)) {
+			throw new IllegalAccessException("user does not have permission to perform this action");
+		}
+		RequestContext context = RequestContext.createRequestContext(ocontext,entity.getEntityKey(), entityObject, type, requestContext,
+						securityManager, requestUser);
+		Object target=cfg.invoke(entitySetName, Action.GET, context, responseContext);
+		ObjectMerger mergeMethod=new ObjectMerger();
+		if(isMerge) {
+			mergeMethod.mergeObjects(entityObject, target);
+		} else {
+			mergeMethod.updateObjects(entityObject, target);
+		}
+		//mergeMethod.setKeyProperties(KeyMap.fromOEntityKey(entity.getEntityKey()), target);
+		context = RequestContext.createRequestContext(ocontext,entity.getEntityKey(), target, type, requestContext,
+						securityManager, requestUser);
+		cfg.invoke(entitySetName, Action.UPDATE, context, responseContext);
+	}
 	@Override
 	public void mergeEntity(ODataContext ocontext, String entitySetName, OEntity entity) {
-		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type);
-		RequestContext context = RequestContext.createRequestContext(ocontext, entityObject, type, requestContext,
-				securityManager, requestUser);
-		cfg.invoke(entitySetName, Action.PATCH, context, responseContext);
+		updateEntity(ocontext, entitySetName, entity,true);
 		return;
 
 	}
 
 	@Override
 	public void updateEntity(ODataContext ocontext, String entitySetName, OEntity entity) {
-		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type);
-		RequestContext context = RequestContext.createRequestContext(ocontext, entityObject, type, requestContext,
-				securityManager, requestUser);
-		cfg.invoke(entitySetName, Action.UPDATE, context, responseContext);
+		updateEntity(ocontext, entitySetName, entity,false);
 		return;
 
 	}
@@ -509,7 +567,7 @@ public class GenericProducer implements ODataProducer {
 			ret = security.getReturnValue(ret, requestUser);
 		}
 		if (name.getReturnType().isSimple()) {
-			return Responses.simple((EdmSimpleType<?>) name.getReturnType(), ret);
+			return Responses.simple((EdmSimpleType<?>) name.getReturnType(),"result", ret);
 		} else if (name.getReturnType() instanceof EdmCollectionType) {
 			OCollection<?> items = OEntityConverter.getCollection(getMetadata(),
 					((EdmCollectionType) name.getReturnType()), ret);
@@ -521,7 +579,7 @@ public class GenericProducer implements ODataProducer {
 			return Responses.collection(items);
 		} else if (name.getReturnType() instanceof EdmComplexType) {
 			return Responses.complexObject(OEntityConverter.createComplexObject(getMetadata(), ret,
-					(EdmComplexType) name.getReturnType(), queryInfo), "value");
+					(EdmComplexType) name.getReturnType(), queryInfo), "result");
 		}
 		// if (name.getReturnType() != o.getClass()) {
 		// throw new UnexpectedException("");

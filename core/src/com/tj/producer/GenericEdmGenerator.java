@@ -213,7 +213,7 @@ public class GenericEdmGenerator implements EdmGenerator {
 				if(fieldTypeInfo.type==EdmTypeInfo.EdmTypeType.ENTITY || fieldTypeInfo.type==EdmTypeInfo.EdmTypeType.ENTITY_COLLECTION) {
 					continue;//throw new RuntimeException("Error in type: "+fieldTypeInfo.clazz.getName());
 				}
-				properties.add(EdmProperty.newBuilder(field.getName()).setType(fieldTypeInfo.builder));
+				properties.add(EdmProperty.newBuilder(field.getName()).setNullable(true).setType(fieldTypeInfo.builder));
 			}
 		}
 	}

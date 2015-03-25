@@ -69,4 +69,10 @@ public class TestInterfaceService implements Service<TestEntity> {
 		return TestEntity.class;
 	}
 
+	@Override
+	public TestEntity linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey, String property, Object newLink) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

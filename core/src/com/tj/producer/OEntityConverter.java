@@ -7,9 +7,12 @@ import java.beans.PropertyDescriptor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
@@ -41,6 +44,7 @@ import org.odata4j.edm.EdmType;
 import org.odata4j.producer.QueryInfo;
 
 import com.tj.datastructures.PropertyPath;
+import com.tj.exceptions.IllegalRequestException;
 import com.tj.producer.annotations.entity.IgnoreRead;
 import com.tj.producer.util.ReflectionUtil;
 
@@ -170,11 +174,13 @@ public class OEntityConverter {
 	}
 
 	public static OCollection<? extends OObject> getCollection(EdmDataServices service, EdmProperty prop, Object value) {
-		if (!Iterable.class.isAssignableFrom(value.getClass())) {
-			throw new RuntimeException("Not a collection: " + prop.getName());
-		}
-		if (!EdmCollectionType.class.isAssignableFrom(prop.getType().getClass())) {
-			throw new RuntimeException("Property Type must be a collection tpye: " + prop.getName());
+		if(!value.getClass().isArray()) {
+			if (!Iterable.class.isAssignableFrom(value.getClass())) {
+				throw new RuntimeException("Not a collection: " + prop.getName());
+			}
+			if (!EdmCollectionType.class.isAssignableFrom(prop.getType().getClass())) {
+				throw new RuntimeException("Property Type must be a collection tpye: " + prop.getName());
+			}
 		}
 		return getCollection(service, (EdmCollectionType) prop.getType(), value);
 	}
@@ -182,6 +188,9 @@ public class OEntityConverter {
 	public static OCollection<? extends OObject> getCollection(EdmDataServices service, EdmCollectionType type,
 			Object value) {
 		OCollection.Builder<OObject> builder = OCollections.newBuilder(type.getItemType());
+		if(value.getClass().isArray()) {
+			value=Arrays.asList((Object[])value);
+		}
 		if (!Iterable.class.isAssignableFrom(value.getClass())) {
 			throw new RuntimeException("Object is not a collection");
 		}
@@ -231,11 +240,16 @@ public class OEntityConverter {
 		PropertyPath select = new PropertyPath(info.select);
 		return createOEntity(service, o, type, expand, select);
 	}
+	public static OEntity createOEntity(EdmDataServices service, Object o,EdmEntitySet type, QueryInfo info) {
+		PropertyPath expand = new PropertyPath(info.expand);
+		PropertyPath select = new PropertyPath(info.select);
+		return createOEntity(service, o, type, expand, select);
+	}
 	public static OEntity createOEntityCheckType(EdmDataServices service, Object o, EdmEntityType check) {
 		return createOEntityCheckType(service, o,o.getClass(),check);
 	}
 	public static OEntity createOEntityCheckType(EdmDataServices service, Object o,Class<?> type, EdmEntityType check) {
-		EdmEntitySet set = service.getEdmEntitySet(type.getSimpleName());
+		EdmEntitySet set = service.getEdmEntitySet(check);
 		if (!check.equals(set.getType())) {
 			throw new IllegalArgumentException("Unexpected type found: ");
 		}
@@ -327,8 +341,10 @@ public class OEntityConverter {
 		}
 		return ret;
 	}
-
 	public static Object oEntityToObject(OStructuralObject object, Class<?> type) {
+		return oEntityToObject(object, type,new HashMap<String,Object>());
+	}
+	public static Object oEntityToObject(OStructuralObject object, Class<?> type,Map<String,Object> relations) {
 		BeanInfo info;
 		Object ret;
 		try {
@@ -343,8 +359,10 @@ public class OEntityConverter {
 		}
 		for (PropertyDescriptor pd : info.getPropertyDescriptors()) {
 			try {
-				// Map<String,Class<?>>
-				// keyTypes=cfg.getKeysMap(object.getEntitySetName());
+				if(relations.containsKey(pd.getName())) {
+					invokeSetter(ret, pd, relations.get(pd.getName()));
+					continue;
+				}
 				OProperty<?> propertyInfo = object.getProperty(pd.getName());
 				if (propertyInfo != null) {
 					if (pd.getPropertyType().isEnum()) {
@@ -380,6 +398,19 @@ public class OEntityConverter {
 	private static void invokeSetter(Object obj, PropertyDescriptor pd, Object setterValue) {
 		setterValue = tryConvertToDate(pd.getPropertyType(), setterValue);
 		ReflectionUtil.invokeSetter(obj, pd, setterValue);
+	}
+	public static String getKeyFromUrl(String href) {
+		Pattern p=Pattern.compile("\\([^()]+\\)$");
+		Matcher m=p.matcher(href);
+		boolean hasMatch=m.find();
+		if(!hasMatch || m.end()!=href.length()) {
+			throw new IllegalRequestException("Not a legal url");
+		}
+		return href.substring(m.start(), m.end());
+	}
+	public static OEntityKey getKeyFromHref(String href) {
+
+		return OEntityKey.parse(getKeyFromUrl(href));
 	}
 
 }

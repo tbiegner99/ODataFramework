@@ -12,6 +12,8 @@ public interface Service<T> {
 
 	public Class<? extends T> getServiceType();
 
+	public T linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey,String property,Object newLink);
+
 	public T createEntity(Class<?> type, RequestContext request, ResponseContext response, T object);
 
 	public T mergeEntity(Class<?> type, RequestContext request, ResponseContext response, T object, KeyMap keys);
@@ -27,6 +29,7 @@ public interface Service<T> {
 
 	public Long getEntitiesCount(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info);
+
 
 	// count
 	// public Integer getEntitiesCount(RequestContext request, ResponseContext

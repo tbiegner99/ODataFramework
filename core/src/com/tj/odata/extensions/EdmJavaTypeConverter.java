@@ -6,38 +6,42 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.UUID;
 
 import org.joda.time.Instant;
 import org.joda.time.LocalDateTime;
 import org.joda.time.LocalTime;
 import org.odata4j.core.Guid;
+import org.odata4j.core.UnsignedByte;
 import org.odata4j.edm.EdmSimpleType;
 
 import com.tj.exceptions.IllegalOperationException;
 import com.tj.exceptions.IllegalTypeException;
 
 public class EdmJavaTypeConverter {
-	public static <T extends Number> T convertNumber(Number i,Class<T> target) {
+	public static Number convertNumber(Object object,Class<? extends Number> result) {
 		try {
-			if(target == BigDecimal.class) {
-				return (T) new BigDecimal(i.toString());
-			} else if(target == BigInteger.class) {
-				return (T) new BigInteger(i.toString());
-			} else if(target==Byte.class || target==byte.class) {
-				return (T) new Byte(i.toString());
-			} else if(target==Double.class || target==double.class) {
-				return (T) new Integer(i.toString());
-			} else if(target==Float.class || target==float.class) {
-				return (T) new Integer(i.toString());
-			} else if(target==Integer.class || target==int.class) {
-				return (T) new Integer(i.toString());
-			} else if(target==Long.class || target==long.class) {
-				return (T) new Long(i.toString());
-			} else if(target==Short.class || target==short.class) {
-				return (T) new Short(i.toString());
+			if(result == BigDecimal.class) {
+				return new BigDecimal(object.toString());
+			} else if(result == BigInteger.class) {
+				return new BigDecimal(object.toString()).toBigInteger();
+			} else if(result==Byte.class || result==byte.class) {
+				return new Byte((new Double(object.toString())).byteValue());
+			} else if(result==Double.class || result==double.class) {
+				return new Double(object.toString());
+			} else if(result==Float.class || result==float.class) {
+				return new Float((new Double(object.toString())).floatValue());
+			} else if(result==Integer.class || result==int.class) {
+				return new Integer((new Double(object.toString())).intValue());
+			} else if(result==Long.class || result==long.class) {
+				return new Long((new Double(object.toString())).longValue());
+			} else if(result==Short.class || result==short.class) {
+				return new Short((new Double(object.toString())).shortValue());
+			} else if(result==UnsignedByte.class) {
+				return new UnsignedByte((new Double(object.toString())).intValue());
 			}
-			throw new NumberFormatException("Number type not supported: "+target.getSimpleName());
+			throw new NumberFormatException("Number type not supported: "+result.getSimpleName());
 		} catch(NumberFormatException e) {
 			throw new IllegalTypeException(e.getMessage(),e);
 		}
@@ -98,8 +102,13 @@ public class EdmJavaTypeConverter {
 			return time.toDate();
 		} else if (Calendar.class.isAssignableFrom(target)) {
 			Calendar c;
+
 			try {
-				c = (Calendar) target.newInstance();
+				if(Calendar.class==target) {
+					c=new GregorianCalendar();
+				} else {
+					c = (Calendar) target.newInstance();
+				}
 			} catch (Exception e) {
 				throw new RuntimeException("Unable to instantiate calendar of type: " + target.getName(), e);
 			}

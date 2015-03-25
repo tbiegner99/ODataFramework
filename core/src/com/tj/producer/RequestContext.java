@@ -48,7 +48,9 @@ public class RequestContext {
 			CompositeSecurityManager manager, User user) {
 		this(headers, objects, null, null, request, manager, user);
 	}
-
+	public QueryInfo getQueryInfo() {
+		return getContextObjectOfType(QueryInfo.class);
+	}
 	public String getRawHeader(String name) {
 		if (name == null) {
 			return null;
@@ -134,7 +136,13 @@ public class RequestContext {
 	public User getUser() {
 		return user;
 	}
-
+	public static RequestContext createRequestContext(ODataContext ocontext,OEntityKey key, Object entity, Class<?> type,
+					HttpServletRequest requestContext, CompositeSecurityManager manager, User user) {
+				List<Object> objects = new ArrayList<Object>();
+				objects.add(entity);
+				KeyMap map = KeyMap.fromOEntityKey(key);
+				return new RequestContext(null, objects, entity, map, requestContext, manager, user);
+	}
 	public static RequestContext createRequestContext(ODataContext ocontext, Object entity, Class<?> type,
 			HttpServletRequest requestContext, CompositeSecurityManager manager, User user) {
 		List<Object> objects = new ArrayList<Object>();

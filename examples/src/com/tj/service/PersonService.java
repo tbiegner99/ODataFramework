@@ -61,4 +61,10 @@ public class PersonService implements Service<Person> {
 		return Person.class;
 	}
 
+	@Override
+	public Person linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey, String property, Object newLink) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

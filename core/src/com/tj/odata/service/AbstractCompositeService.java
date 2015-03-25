@@ -59,19 +59,19 @@ public abstract class AbstractCompositeService implements CompositeService {
 
 	@Override
 	public Object createEntity(Class<?> type, RequestContext request, ResponseContext response, Object object) {
-		return getServiceForObject(object.getClass()).createEntity(type, request, response, object);
+		return getServiceForObject(type).createEntity(type, request, response, object);
 	}
 
 	@Override
 	public Object mergeEntity(Class<?> type, RequestContext request, ResponseContext response, Object object,
 			KeyMap keys) {
-		return getServiceForObject(object.getClass()).mergeEntity(type, request, response, object, keys);
+		return getServiceForObject(type).mergeEntity(type, request, response, object, keys);
 	}
 
 	@Override
 	public Object updateEntity(Class<?> type, RequestContext request, ResponseContext response, Object object,
 			KeyMap keys) {
-		return getServiceForObject(object.getClass()).updateEntity(type, request, response, object, keys);
+		return getServiceForObject(type).updateEntity(type, request, response, object, keys);
 	}
 
 	@Override
@@ -94,6 +94,11 @@ public abstract class AbstractCompositeService implements CompositeService {
 	public Long getEntitiesCount(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info) {
 		return getServiceForObject(type).getEntitiesCount(type, request, response, keys, info);
+	}
+
+	@Override
+	public Object linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap object, String property, Object newLink) {
+		return getServiceForObject(type).linkNewEntity(type, request, response, object, property, newLink);
 	}
 
 	@Override
@@ -122,7 +127,7 @@ public abstract class AbstractCompositeService implements CompositeService {
 			if (type instanceof ParameterizedType) {
 				ParameterizedType pt = (ParameterizedType) type;
 				Class<?> rawType = (Class<?>) pt.getRawType();
-				if (Service.class.isAssignableFrom((Class<?>) rawType)) {
+				if (Service.class.isAssignableFrom(rawType)) {
 					// if (pt.getRawType() == Service.class) {
 					Class<?> toAdd = getTypeOfService((Class<? extends Service>) rawType);
 					ret.add(toAdd);
