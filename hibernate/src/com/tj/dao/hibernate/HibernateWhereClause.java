@@ -212,7 +212,7 @@ public class HibernateWhereClause extends WhereClause {
 		Class<?> containingCollection=null;
 		for(;i<components.length;i++) {
 			//Collections may have size as last property in chain
-			if(i==components.length-1 && containingCollection!=null && components[i].equals("size")) {
+			if(i==components.length-1 && containingCollection!=null && (components[i].equals("size") || components[i].equals("$count"))) {
 				return startingClass;
 			}
 			try {

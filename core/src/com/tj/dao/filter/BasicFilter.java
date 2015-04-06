@@ -3,6 +3,7 @@ package com.tj.dao.filter;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.odata4j.exceptions.NotImplementedException;
 import org.odata4j.expression.AggregateAllFunction;
 import org.odata4j.expression.AggregateAnyFunction;
 import org.odata4j.expression.AndExpression;
@@ -104,7 +105,7 @@ public class BasicFilter implements Filter {
 			}
 		}
 		// TODO: ANY,ALL, functions
-		throw new RuntimeException("Not Impolemented: " + e.getClass().getName());
+		throw new NotImplementedException("Not Impolemented: " + e.getClass().getName());
 	}
 
 	public static Filter joinFilters(Collection<Filter> filters) {

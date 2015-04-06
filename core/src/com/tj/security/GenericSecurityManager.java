@@ -242,4 +242,14 @@ public class GenericSecurityManager implements CompositeSecurityManager {
 		this.functionSecurity = functionSecurity;
 	}
 
+	@Override
+	public boolean canReadEntity(Object entity, User u) {
+		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
+		if (manager == null) {
+			return allowedIfNoManager;
+		}
+		return manager.canReadEntity(entity, u);
+	}
+
+
 }

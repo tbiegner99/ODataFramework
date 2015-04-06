@@ -7,13 +7,15 @@ import com.tj.dao.filter.Filter;
 
 public interface SecurityManager<T, E extends User> {
 
-	boolean canReadEntity(Class<? extends T> subType, E u);
+	boolean canReadEntity(Class<? extends T> type,E user);
+
+	boolean canReadEntity(T entity, E u);
 
 	boolean canWriteEntity(T entity, E u);
 
 	boolean canUpdateEntity(T entity, E u);
 
-	boolean canDeleteEntity(Class<? extends T> subType, E u);
+	boolean canDeleteEntity(Class<? extends T> entity, E u);
 
 	boolean canAccessProperty(T entity, String property, E u);
 

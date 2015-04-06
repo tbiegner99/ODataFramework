@@ -18,7 +18,7 @@ import com.tj.security.UserResolver;
 
 public class GenericProducerFactory implements ODataProducerFactory {
 	private ProducerConfiguration config;
-	private UserResolver userResolver;
+	private UserResolver<?> userResolver;
 	private CompositeSecurityManager securityManager;
 	private EdmDataServices metadata;
 	private GenericEdmGenerator edmGenerator;
@@ -26,7 +26,7 @@ public class GenericProducerFactory implements ODataProducerFactory {
 	public GenericProducerFactory() {
 	}
 
-	public GenericProducerFactory(ProducerConfiguration cfg, CompositeSecurityManager manager, UserResolver resolver) {
+	public GenericProducerFactory(ProducerConfiguration cfg, CompositeSecurityManager manager, UserResolver<?> resolver) {
 		config = cfg;
 		userResolver = resolver;
 		securityManager = manager;
@@ -68,7 +68,7 @@ public class GenericProducerFactory implements ODataProducerFactory {
 	}
 
 	@Autowired(required=false)
-	public void setUserResolver(UserResolver userResolver) {
+	public void setUserResolver(UserResolver<?> userResolver) {
 		this.userResolver = userResolver;
 	}
 

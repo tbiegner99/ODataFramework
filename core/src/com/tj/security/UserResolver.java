@@ -5,7 +5,7 @@ import javax.ws.rs.core.SecurityContext;
 
 import com.tj.exceptions.NoLoginException;
 
-public interface UserResolver {
+public interface UserResolver<T extends User> {
 
-	public User getUser(HttpServletRequest request, SecurityContext context) throws NoLoginException;
+	public T getUser(HttpServletRequest request, SecurityContext context) throws NoLoginException;
 }

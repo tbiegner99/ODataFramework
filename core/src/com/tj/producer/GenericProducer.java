@@ -135,6 +135,10 @@ public class GenericProducer implements ODataProducer {
 		}
 		switch (action) {
 			case GET:
+				if(entity==null) {
+					return securityManager.canReadEntity(entityType, requestUser);
+				}
+				return securityManager.canReadEntity(entity, requestUser);
 			case LIST:
 			case COUNT:
 				return securityManager.canReadEntity(entityType, requestUser);
@@ -208,6 +212,9 @@ public class GenericProducer implements ODataProducer {
 		Collection<? extends Object> objects = (Collection<? extends Object>) o;
 		List<OEntity> ret = new ArrayList<OEntity>();
 		for (Object item : objects) {
+			if (!canPerformEntityAcion(ocontext, Action.GET, type, item)) {
+				continue;
+			}
 			OEntity entity = OEntityConverter.createOEntity(getMetadata(), item,type, queryInfo);
 			ret.add(entity);
 		}
@@ -248,7 +255,7 @@ public class GenericProducer implements ODataProducer {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
 		Object o = cfg.invoke(entitySetName, Action.GET, context, responseContext);
-		if (o == null) {
+		if (o == null || !canPerformEntityAcion(ocontext, Action.GET, type, o)) {
 			throw new NotFoundException("No entity found with this id.");
 		}
 		OEntity response = OEntityConverter.createOEntity(getMetadata(), o,type, queryInfo);
