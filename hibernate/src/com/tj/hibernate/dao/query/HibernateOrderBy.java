@@ -1,4 +1,4 @@
-package com.tj.dao.hibernate;
+package com.tj.hibernate.dao.query;
 
 import java.util.List;
 

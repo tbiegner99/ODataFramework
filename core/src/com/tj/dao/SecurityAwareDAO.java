@@ -7,8 +7,14 @@ import org.odata4j.producer.QueryInfo;
 
 import com.tj.producer.KeyMap;
 import com.tj.security.SecurityManager;
-import com.tj.security.User;
-
+import com.tj.security.user.User;
+/**
+ * This extension to the base dao allows implementors to take a security context that may be used to generate query.
+ * Optionally, implementors may also implement operations specific for situations without a security context
+ * @author tbiegner
+ *
+ * @param <T>
+ */
 public interface SecurityAwareDAO<T> extends DAOBase<T> {
 	T createEntity(T entity, SecurityManager<T, ?> manager, User user);
 

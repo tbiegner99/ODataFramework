@@ -16,7 +16,6 @@ import com.tj.producer.util.ReflectionUtil;
 public abstract class AbstractPackageScanService extends AbstractCompositeService {
 	private Set<Object> createdServices = new HashSet<Object>();
 	private AutowireCapableBeanFactory beanFactory;
-
 	public AbstractPackageScanService(String packageName, Class<? extends Annotation> marker) {
 		init(Arrays.asList(packageName), marker);
 	}
@@ -50,6 +49,9 @@ public abstract class AbstractPackageScanService extends AbstractCompositeServic
 			}
 			try {
 				Service<?> s = (Service<?>) service.newInstance();
+				if(beanFactory!=null) {
+					this.beanFactory.autowireBean(s);
+				}
 				Collection<Class<?>> serviceClasses = AbstractCompositeService.getServiceTypesForClass(service);
 				this.addService(serviceClasses, s);
 				createdServices.add(s);

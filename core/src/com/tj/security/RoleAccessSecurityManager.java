@@ -13,8 +13,12 @@ import javax.ws.rs.core.SecurityContext;
 import com.tj.dao.filter.Filter;
 import com.tj.exceptions.NoLoginException;
 import com.tj.exceptions.UnauthorizedException;
+import com.tj.producer.configuration.ProducerConfiguration;
+import com.tj.security.user.Role;
+import com.tj.security.user.RoleUser;
+import com.tj.security.user.UserResolver;
 
-public abstract class RoleAccessSecurityManager implements SecurityManager<Object, RoleUser>, UserResolver {
+public abstract class RoleAccessSecurityManager implements SecurityManager<Object, RoleUser>, UserResolver<RoleUser> {
 	private Set<String> allowedRoles = new HashSet<>();
 
 	public Set<String> getAllowedRoles() {
@@ -41,70 +45,70 @@ public abstract class RoleAccessSecurityManager implements SecurityManager<Objec
 	}
 
 	@Override
-	public boolean canReadEntity(Class<? extends Object> subType, RoleUser u) {
+	public boolean canReadEntity(Class<? extends Object> subType, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public boolean canWriteEntity(Object entity, RoleUser u) {
+	public boolean canWriteEntity(Object entity, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public boolean canDeleteEntity(Class<? extends Object> subType, RoleUser u) {
+	public boolean canDeleteEntity(Class<? extends Object> subType, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public boolean canAccessProperty(Object entity, String property, RoleUser u) {
+	public boolean canAccessProperty(Object entity, String property, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public boolean canReadProperty(Object entity, String property, RoleUser u) {
+	public boolean canReadProperty(Object entity, String property, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public boolean canWriteProperty(Object entity, String property, RoleUser u) {
+	public boolean canWriteProperty(Object entity, String property, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public boolean canUpdateProperty(Object entity, String property, RoleUser u) {
+	public boolean canUpdateProperty(Object entity, String property, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public Object getPropertyValueForCreate(Object entity, Object supplied, String property, RoleUser u) {
+	public Object getPropertyValueForCreate(Object entity, Object supplied, String property, RoleUser u,ProducerConfiguration appContext) {
 		return supplied;
 	}
 
 	@Override
-	public Object getPropertyValueForUpdate(Object entity, Object supplied, String property, RoleUser u) {
+	public Object getPropertyValueForUpdate(Object entity, Object supplied, String property, RoleUser u,ProducerConfiguration appContext) {
 		return supplied;
 	}
 
 	@Override
-	public Object getPropertyValueForRead(Object entity, Object supplied, String property, RoleUser u) {
+	public Object getPropertyValueForRead(Object entity, Object supplied, String property, RoleUser u,ProducerConfiguration appContext) {
 		return supplied;
 	}
 
 	@Override
-	public Collection<Filter> getUserLevelFilters(Class<Object> clazz, RoleUser u) {
+	public Collection<Filter> getUserLevelFilters(Class<Object> clazz, RoleUser u,ProducerConfiguration appContext) {
 		return new ArrayList<Filter>();
 	}
 
 	@Override
-	public boolean canUpdateEntity(Object entity, RoleUser u) {
+	public boolean canUpdateEntity(Object entity, RoleUser u,ProducerConfiguration appContext) {
 		return userIsAllowed(u);
 	}
 
 	@Override
-	public abstract User getUser(HttpServletRequest request, SecurityContext context) throws NoLoginException;
+	public abstract RoleUser getUser(HttpServletRequest request, SecurityContext context) throws NoLoginException;
 
 	@Override
-	public Map<String, Object> getFilterParameters(Class<Object> clazz, RoleUser u) {
+	public Map<String, Object> getFilterParameters(Class<Object> clazz, RoleUser u,ProducerConfiguration appContext) {
 		return new HashMap<String, Object>();
 	}
 

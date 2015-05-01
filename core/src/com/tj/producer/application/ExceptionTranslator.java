@@ -5,7 +5,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.Response.Status.Family;
 import javax.ws.rs.core.Response.StatusType;
+import javax.ws.rs.core.UriBuilderException;
 
+import org.hibernate.PropertyAccessException;
 import org.odata4j.producer.resources.ExceptionMappingProvider;
 
 import com.sun.jersey.api.NotFoundException;
@@ -14,6 +16,12 @@ import com.tj.exceptions.IllegalRequestException;
 import com.tj.exceptions.NoSuchPropertyException;
 import com.tj.exceptions.PropertyError;
 
+/***
+ * Better exception handling than the default odata4j application. The responses are more informative and response codes are more
+ * indicative of the error.
+ * @author tbiegner
+ *
+ */
 public class ExceptionTranslator extends ExceptionMappingProvider {
 
 	@Override
@@ -23,6 +31,8 @@ public class ExceptionTranslator extends ExceptionMappingProvider {
 			return super.toResponse(new com.tj.exceptions.NotFoundException("Invalid url request"));
 		} else if(e instanceof NoSuchPropertyException) {
 			return super.toResponse(new GenericOdataProducerException(Status.BAD_REQUEST,e));
+		} else if(e instanceof UriBuilderException) {
+			return super.toResponse(new GenericOdataProducerException(Status.BAD_REQUEST,"Illegal character in url",e));
 		} else if(e instanceof PropertyError) {
 			return super.toResponse(new GenericOdataProducerException(Status.INTERNAL_SERVER_ERROR,e));
 		} else if(e instanceof WebApplicationException) {
@@ -34,6 +44,8 @@ public class ExceptionTranslator extends ExceptionMappingProvider {
 			return super.toResponse(new GenericOdataProducerException(status, status.getReasonPhrase(), e));
 		} else if(e instanceof IllegalArgumentException) {
 			return super.toResponse(new IllegalRequestException(e.getMessage(), e));
+		} else if(e instanceof PropertyAccessException) {
+			return super.toResponse(new IllegalRequestException("Illegal property in request.", e));
 		}
 		return super.toResponse(e);
 	}

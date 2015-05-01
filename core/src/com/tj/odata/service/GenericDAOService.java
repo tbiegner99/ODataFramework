@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 
 import org.odata4j.producer.QueryInfo;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tj.dao.DAOBase;
@@ -13,8 +14,9 @@ import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
 import com.tj.producer.util.ReflectionUtil;
 
-@Transactional
-public class GenericDAOService<T> implements Service<T> {
+@Transactional(propagation=Propagation.REQUIRED)
+@org.springframework.stereotype.Service
+public class GenericDAOService<T> extends AbstractService<T> implements Service<T> {
 	private DAOBase<T> dao;
 
 	public GenericDAOService(DAOBase<T> dao) {
@@ -49,13 +51,13 @@ public class GenericDAOService<T> implements Service<T> {
 	@Override
 	public Collection<T> getEntities(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info) {
-		return dao.getEntities(request.getContextObjectOfType(QueryInfo.class));
+		return dao.getEntities(info);
 	}
 
 	@Override
 	public Long getEntitiesCount(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info) {
-		return (long) dao.countEntities(request.getContextObjectOfType(QueryInfo.class));
+		return (long) dao.countEntities(info);
 	}
 
 	public DAOBase<T> getDAO() {
@@ -70,14 +72,14 @@ public class GenericDAOService<T> implements Service<T> {
 	@Override
 	public T linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey, String property, Object newLink) {
 		try {
-			T object=dao.getEntity(objectKey);
+			T object=getEntity(type, request, response, objectKey);
 			Field f=ReflectionUtil.getFieldForType(object.getClass(), property);
 			if(Collection.class.isAssignableFrom(f.getType())) {
 				((Collection)ReflectionUtil.invokeGetter(object, property)).add(newLink);
 			} else {
 				ReflectionUtil.invokeSetter(object, property, newLink);
 			}
-			dao.updateEntity(object, objectKey);
+			updateEntity(type, request, response, object, objectKey);
 			return object;
 		} catch (NoSuchFieldException e) {
 			throw new IllegalRequestException("");

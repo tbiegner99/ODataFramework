@@ -1,14 +1,16 @@
 package com.tj.producer.annotations.validation;
 
 import java.lang.reflect.Field;
-
+//TODO: Validation support
 public class BeanValidator {
 	public static boolean isValid(Object bean) {
-		if (bean == null)
+		if (bean == null) {
 			return false;
+		}
 		for (Field f : bean.getClass().getDeclaredFields()) {
-			if (!validateField(bean, f))
+			if (!validateField(bean, f)) {
 				return false;
+			}
 		}
 		return true;
 	}

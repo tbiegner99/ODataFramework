@@ -6,6 +6,7 @@ import java.util.Map;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
+import com.tj.producer.configuration.ProducerConfiguration;
 
 public class FunctionRouter<T extends Function> implements FunctionService {
 	private FunctionFactory<T> factory;
@@ -20,8 +21,8 @@ public class FunctionRouter<T extends Function> implements FunctionService {
 
 	@Override
 	public Object invoke(FunctionName name, Map<String, Object> parameters, RequestContext request,
-			ResponseContext response) {
-		return factory.getFunction(name).invoke(name, parameters, request, response);
+			ResponseContext response,ProducerConfiguration config) {
+		return factory.getFunction(name).invoke(name, parameters, request, response,config);
 	}
 
 	@Override

@@ -49,7 +49,7 @@ public class PackageScannerFunctionFactory extends DefaultFunctionFactory<Functi
 	@Autowired
 	public void setBeanFactory(AutowireCapableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
-		for (Object o : getItems()) {
+		for (Object o : getFunctions()) {
 			beanFactory.autowireBean(o);
 		}
 	}

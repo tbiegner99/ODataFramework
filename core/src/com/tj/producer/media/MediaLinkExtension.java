@@ -19,7 +19,7 @@ import com.tj.producer.ResponseContext;
 import com.tj.producer.configuration.ProducerConfiguration;
 import com.tj.producer.configuration.ProducerConfiguration.Action;
 import com.tj.security.CompositeSecurityManager;
-import com.tj.security.User;
+import com.tj.security.user.User;
 
 public class MediaLinkExtension implements OMediaLinkExtension {
 	private ProducerConfiguration config;

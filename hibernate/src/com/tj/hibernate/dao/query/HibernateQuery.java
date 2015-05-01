@@ -1,10 +1,10 @@
-package com.tj.dao.hibernate;
+package com.tj.hibernate.dao.query;
 
 import org.hibernate.Session;
 
 import com.tj.dao.filter.Query;
 import com.tj.security.SecurityManager;
-import com.tj.security.User;
+import com.tj.security.user.User;
 
 public class HibernateQuery<T> extends Query<T> {
 
@@ -14,7 +14,7 @@ public class HibernateQuery<T> extends Query<T> {
 	}
 
 	public HibernateQuery(QueryType type, Class<T> entity, SecurityManager<T, User> manager, User user) {
-		super(type, entity);
+		super(type, entity,-1,-1,manager,user);
 		setWhere(new HibernateWhereClause(this));
 	}
 

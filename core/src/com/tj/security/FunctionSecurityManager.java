@@ -1,5 +1,7 @@
 package com.tj.security;
 
+import com.tj.security.user.User;
+
 public interface FunctionSecurityManager<E extends User> {
 
 	boolean canCallFunction(E user);

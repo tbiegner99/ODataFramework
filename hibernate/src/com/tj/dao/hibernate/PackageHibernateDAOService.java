@@ -6,51 +6,55 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.hibernate.SessionFactory;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.tj.odata.service.AbstractPackageScanService;
 import com.tj.odata.service.Service;
+@Transactional(propagation=Propagation.REQUIRED)
+@org.springframework.stereotype.Service
+public class PackageHibernateDAOService extends AbstractHibernatePackageScanService {
 
-public class PackageHibernateDAOService extends AbstractPackageScanService {
-	private SessionFactory factory;
 	public PackageHibernateDAOService(String packageName, Class<? extends Annotation> marker, SessionFactory fact) {
-		factory = fact;
+		super(fact);
 		init(Arrays.asList(packageName), marker);
 
 	}
 
 	public PackageHibernateDAOService(Collection<String> packageNames, Class<? extends Annotation> marker,
 			SessionFactory fact) {
-		factory = fact;
+		super(fact);
 		init(packageNames, marker);
 	}
 
 	public PackageHibernateDAOService(Collection<String> packageNames, Class<? extends Annotation> marker) {
+		super(null);
 		init(packageNames, marker);
 	}
 
 	public PackageHibernateDAOService(SessionFactory fact, Collection<String> packageNames,
 			Class<? extends Annotation>... markers) {
-		factory = fact;
+		super(fact);
 		init(packageNames, markers);
 	}
 
 	public PackageHibernateDAOService(SessionFactory fact, Collection<String> packageNames,
 			Class<? extends Annotation> marker, Map<Class<?>, Service<?>> extras) {
-		factory = fact;
+		super(fact);
 		init(extras, packageNames, marker);
 	}
 
 	public PackageHibernateDAOService(Collection<String> packageNames, Class<? extends Annotation> marker,
 			Map<Class<?>, Service<?>> extras) {
+		super(null);
 		init(extras, packageNames, marker);
 	}
 
 	@Override
 	protected <T> Service<T> buildServiceForClass(Class<T> type) {
-		if (factory == null) {
+		if (getSessionFactory() == null) {
 			return new GenericHibernateDAOService<T>(type);
 		}
-		return new GenericHibernateDAOService<T>(type, factory);
+		return new GenericHibernateDAOService<T>(type, getSessionFactory());
 	}
 
 }

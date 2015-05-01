@@ -45,23 +45,28 @@ import org.odata4j.producer.QueryInfo;
 
 import com.tj.datastructures.PropertyPath;
 import com.tj.exceptions.IllegalRequestException;
+import com.tj.odata.extensions.EdmJavaTypeConverter;
 import com.tj.producer.annotations.entity.IgnoreRead;
+import com.tj.producer.configuration.ProducerConfiguration;
 import com.tj.producer.util.ReflectionUtil;
+import com.tj.security.CompositeSecurityManager;
+import com.tj.security.user.User;
 
 public class OEntityConverter {
-
 	public static Map<String, OLink> getLinks(EdmEntityType type, Object o, PropertyPath expandList,
-			PropertyPath select, EdmDataServices service) {
+			PropertyPath select, EdmDataServices service,ProducerConfiguration cfg, User user) {
+		CompositeSecurityManager securityManager=(cfg==null?null:cfg.getSecurityManager());
 		Map<String, OLink> props = new HashMap<String, OLink>();
 		for (EdmNavigationProperty prop : type.getNavigationProperties()) {
 			boolean doSelect = (select.getPathComponent() == null && select.isLeaf())
 					|| select.nextComponentContains(prop.getName());
-			if (!doSelect) {
-				continue;
-			}
+
 			String relName = prop.getRelationship().getName();
 			String propName = prop.getName();
-
+			//
+			if (!doSelect || (securityManager!=null && (!securityManager.canAccessProperty(o, propName, user,cfg) ||  !securityManager.canReadProperty(o, propName, user,cfg)))) {
+				continue;
+			}
 			try {
 				// only read the value if read is not blocked
 				if (ReflectionUtil.getFieldForType(o,propName).isAnnotationPresent(IgnoreRead.class)) {
@@ -73,9 +78,8 @@ public class OEntityConverter {
 			boolean doExpand = !expandList.isLeaf() && expandList.nextComponentContains(propName);
 			EdmEntitySet target = service.getEdmEntitySet(prop.getToRole().getType().getName());
 			if (doExpand) {
-				Object value = ReflectionUtil.getFieldValue(o, propName);
+				Object value = ReflectionUtil.invokeGetter(o, propName);//ReflectionUtil.getFieldValue(o, propName);
 				if (value == null) {
-
 					props.put(prop.getName(),OLinks.relatedEntityInline(relName, propName, "url", null));
 					continue;
 				}
@@ -83,13 +87,13 @@ public class OEntityConverter {
 					List<OEntity> entities = new ArrayList<OEntity>();
 					for (Object obj : (Iterable<?>) value) {
 						OEntity entity = createOEntity(service, obj, target, expandList.getSubPath(propName),
-								select.getSubPath(propName));
+								select.getSubPath(propName), cfg, user);
 						entities.add(entity);
 					}
 					props.put(propName, OLinks.relatedEntitiesInline(relName, propName, "url", entities));
 				} else {
 					OEntity entity = createOEntity(service, value, target, expandList.getSubPath(propName),
-							select.getSubPath(propName));
+							select.getSubPath(propName), cfg, user);
 
 					props.put(propName, OLinks.relatedEntityInline(relName, propName, "url", entity));
 				}
@@ -101,12 +105,13 @@ public class OEntityConverter {
 	}
 
 	public static List<OProperty<?>> getPropertiesList(EdmDataServices service, List<String> keys,
-			EdmStructuralType type, Object o, PropertyPath select) {
-		return new ArrayList<OProperty<?>>(getProperties(service, keys, type, o, select).values());
+			EdmStructuralType type, Object o, PropertyPath select, ProducerConfiguration cfg, User user) {
+		return new ArrayList<OProperty<?>>(getProperties(service, keys, type, o, select, cfg, user).values());
 	}
 
 	public static Map<String, OProperty<?>> getProperties(EdmDataServices service, List<String> keys,
-			EdmStructuralType type, Object o, PropertyPath select) {
+			EdmStructuralType type, Object o, PropertyPath select,ProducerConfiguration cfg,User user) {
+		CompositeSecurityManager securityManager=(cfg==null?null:cfg.getSecurityManager());
 		Map<String, OProperty<?>> props = new HashMap<String, OProperty<?>>();
 		for (EdmProperty prop : type.getProperties()) {
 			try {
@@ -119,7 +124,8 @@ public class OEntityConverter {
 			}
 			boolean doSelect = (keys != null && keys.contains(prop.getName())) || select.isLeaf()
 					|| select.nextComponentContains(prop.getName());
-			if (!doSelect) {
+			boolean canAccessProp=securityManager==null || (securityManager.canAccessProperty(o, prop.getName(), user,cfg) && securityManager.canReadProperty(o, prop.getName(), user,cfg));
+			if (!doSelect || !canAccessProp) {
 				continue;
 			}
 			OProperty<?> property = null;
@@ -134,10 +140,10 @@ public class OEntityConverter {
 				}
 			} else if (prop.getType() instanceof EdmCollectionType) {
 				property = OProperties.collection(prop.getName(), (EdmCollectionType) prop.getType(),
-						getCollection(service, prop, value));
+						getCollection(service, prop, value, cfg, user,null));
 			} else if (value != null) {
 				EdmComplexType ctype = (EdmComplexType) prop.getType();
-				Map<String, OProperty<?>> properties = getProperties(service, null, ctype, value, select);
+				Map<String, OProperty<?>> properties = getProperties(service, null, ctype, value, select, cfg, user);
 				property = OProperties.complex(prop.getName(), ctype, new ArrayList<OProperty<?>>(properties.values()));
 			}
 			if (property != null) {
@@ -173,7 +179,7 @@ public class OEntityConverter {
 		return keyMap;
 	}
 
-	public static OCollection<? extends OObject> getCollection(EdmDataServices service, EdmProperty prop, Object value) {
+	public static OCollection<? extends OObject> getCollection(EdmDataServices service, EdmProperty prop, Object value, ProducerConfiguration cfg, User user,QueryInfo info) {
 		if(!value.getClass().isArray()) {
 			if (!Iterable.class.isAssignableFrom(value.getClass())) {
 				throw new RuntimeException("Not a collection: " + prop.getName());
@@ -182,11 +188,11 @@ public class OEntityConverter {
 				throw new RuntimeException("Property Type must be a collection tpye: " + prop.getName());
 			}
 		}
-		return getCollection(service, (EdmCollectionType) prop.getType(), value);
+		return getCollection(service, (EdmCollectionType) prop.getType(), value, cfg, user,info);
 	}
 
 	public static OCollection<? extends OObject> getCollection(EdmDataServices service, EdmCollectionType type,
-			Object value) {
+			Object value, ProducerConfiguration cfg, User user,QueryInfo info) {
 		OCollection.Builder<OObject> builder = OCollections.newBuilder(type.getItemType());
 		if(value.getClass().isArray()) {
 			value=Arrays.asList((Object[])value);
@@ -203,70 +209,75 @@ public class OEntityConverter {
 				builder.add(OSimpleObjects.create((EdmSimpleType<?>) itemType, item));
 			} else if (itemType instanceof EdmComplexType) {
 				List<OProperty<?>> props = getPropertiesList(service, null, (EdmComplexType) itemType, item,
-						PropertyPath.getEmptyPropertyPath());
+						PropertyPath.getEmptyPropertyPath(), cfg, user);
 				builder.add(OComplexObjects.create((EdmComplexType) itemType, props));
 			} else if (itemType instanceof EdmEntityType) {
-				builder.add(createOEntityCheckType(service, item, (EdmEntityType) itemType));
+				builder.add(createOEntityCheckType(service, item, (EdmEntityType) itemType, cfg, user,info));
 			}
 		}
 		return builder.build();
 	}
 
 	public static OComplexObject createComplexObject(EdmDataServices build, Object o, EdmComplexType type,
-			QueryInfo query) {
+			QueryInfo query, ProducerConfiguration cfg, User user) {
 		PropertyPath path;
 		if (query == null) {
 			path = PropertyPath.getEmptyPropertyPath();
 		} else {
 			path = new PropertyPath(query.select);
 		}
-		List<OProperty<?>> propertyList = getPropertiesList(build, null, type, o, path);
+		List<OProperty<?>> propertyList = getPropertiesList(build, null, type, o, path, cfg, user);
 		return OComplexObjects.create(type, propertyList);
 	}
 
-	public static OEntity createOEntity(EdmDataServices build, Object o,Class<?> type) {
+	public static OEntity createOEntity(EdmDataServices build, Object o,Class<?> type, ProducerConfiguration cfg, User user) {
 		PropertyPath expand = PropertyPath.getEmptyPropertyPath();
 		PropertyPath select = PropertyPath.getEmptyPropertyPath();
-		return createOEntity(build, o,type, expand, select);
+		return createOEntity(build, o,type, expand, select, cfg, user);
 	}
-	public static OEntity createOEntity(EdmDataServices build, Object o) {
-		return createOEntity(build, o,o.getClass());
+	public static OEntity createOEntity(EdmDataServices build, Object o, ProducerConfiguration cfg, User user) {
+		return createOEntity(build, o,o.getClass(), cfg, user);
 	}
-	public static OEntity createOEntity(EdmDataServices service, Object o, QueryInfo info) {
-		return createOEntity(service, o, o.getClass(),info);
+	public static OEntity createOEntity(EdmDataServices service, Object o, QueryInfo info, ProducerConfiguration cfg, User user) {
+		return createOEntity(service, o, o.getClass(),info, cfg, user);
 	}
-	public static OEntity createOEntity(EdmDataServices service, Object o,Class<?> type, QueryInfo info) {
+	public static OEntity createOEntity(EdmDataServices service, Object o,Class<?> type, QueryInfo info, ProducerConfiguration cfg, User user) {
 		PropertyPath expand = new PropertyPath(info.expand);
 		PropertyPath select = new PropertyPath(info.select);
-		return createOEntity(service, o, type, expand, select);
+		return createOEntity(service, o, type, expand, select, cfg, user);
 	}
-	public static OEntity createOEntity(EdmDataServices service, Object o,EdmEntitySet type, QueryInfo info) {
+	public static OEntity createOEntity(EdmDataServices service, Object o,EdmEntitySet type, QueryInfo info, ProducerConfiguration cfg, User user) {
 		PropertyPath expand = new PropertyPath(info.expand);
 		PropertyPath select = new PropertyPath(info.select);
-		return createOEntity(service, o, type, expand, select);
+		return createOEntity(service, o, type, expand, select, cfg, user);
 	}
-	public static OEntity createOEntityCheckType(EdmDataServices service, Object o, EdmEntityType check) {
-		return createOEntityCheckType(service, o,o.getClass(),check);
+	public static OEntity createOEntityCheckType(EdmDataServices service, Object o, EdmEntityType check, ProducerConfiguration cfg, User user,QueryInfo info) {
+		return createOEntityCheckType(service, o,o.getClass(),check, cfg, user,info);
 	}
-	public static OEntity createOEntityCheckType(EdmDataServices service, Object o,Class<?> type, EdmEntityType check) {
+	public static OEntity createOEntityCheckType(EdmDataServices service, Object o,Class<?> type, EdmEntityType check, ProducerConfiguration cfg, User user,QueryInfo info) {
 		EdmEntitySet set = service.getEdmEntitySet(check);
 		if (!check.equals(set.getType())) {
 			throw new IllegalArgumentException("Unexpected type found: ");
 		}
-		return createOEntity(service, o);
+		if(info!=null) {
+			return createOEntity(service, o,info, cfg, user);
+		} else {
+			return createOEntity(service, o,cfg, user);
+		}
 	}
 
-	public static OEntity createOEntity(EdmDataServices service, Object o,Class<?> type, PropertyPath expand, PropertyPath select) {
+	public static OEntity createOEntity(EdmDataServices service, Object o,Class<?> type, PropertyPath expand, PropertyPath select, ProducerConfiguration cfg, User user) {
 		EdmEntitySet set = service.getEdmEntitySet(type.getSimpleName());
-		return createOEntity(service, o, set, expand, select);
+		return createOEntity(service, o, set, expand, select, cfg, user);
 	}
 
 	public static OEntity createOEntity(EdmDataServices service, Object o, EdmEntitySet set, PropertyPath expand,
-			PropertyPath select) {
-		Map<String, OProperty<?>> properties = getProperties(service, set.getType().getKeys(), set.getType(), o, select);
+			PropertyPath select, ProducerConfiguration cfg, User user) {
+
+		Map<String, OProperty<?>> properties = getProperties(service, set.getType().getKeys(), set.getType(), o, select, cfg, user);
 		List<String> keys = set.getType().getKeys();
 		OEntityKey entityKey = OEntityKey.create(getKeyMap(keys, properties));
-		Map<String, OLink> linkMap = getLinks(set.getType(), o, expand, select, service);
+		Map<String, OLink> linkMap = getLinks(set.getType(), o, expand, select, service, cfg, user);
 		List<OLink> links = new ArrayList<OLink>(linkMap.values());
 		ArrayList<OProperty<?>> propertyList = new ArrayList<OProperty<?>>(properties.values());
 		OEntity ret = OEntities.create(set, set.getType(), entityKey, propertyList, links);
@@ -366,7 +377,6 @@ public class OEntityConverter {
 				OProperty<?> propertyInfo = object.getProperty(pd.getName());
 				if (propertyInfo != null) {
 					if (pd.getPropertyType().isEnum()) {
-
 						Class<? extends Enum<?>> e = (Class<? extends Enum<?>>) pd.getPropertyType();
 						Enum<?>[] constants = e.getEnumConstants();
 						for (Enum<?> c : constants) {
@@ -377,7 +387,8 @@ public class OEntityConverter {
 						}
 
 					} else if (propertyInfo.getType().isSimple()) {
-						invokeSetter(ret, pd, propertyInfo.getValue());
+						Object value=EdmJavaTypeConverter.convertToClass((EdmSimpleType<?>) propertyInfo.getType(), propertyInfo.getValue(), pd.getPropertyType());
+						invokeSetter(ret, pd, value);
 					} else if (EdmType.getInstanceType(propertyInfo.getType()) == OEntity.class) {
 						Class<?> propType = Class.forName(propertyInfo.getType().getFullyQualifiedTypeName());
 						Object o = oEntityToObject((OEntity) propertyInfo.getValue(), propType);

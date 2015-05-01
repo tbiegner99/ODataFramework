@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.tj.security.SecurityManager;
-import com.tj.security.User;
+import com.tj.security.user.User;
 
 public abstract class Query<T> {
 	public static enum QueryType {
@@ -118,7 +118,7 @@ public abstract class Query<T> {
 		if (manager == null) {
 			return new ArrayList<>();
 		}
-		Collection<? extends Filter> ret = manager.getUserLevelFilters(entityType, userContext);
+		Collection<? extends Filter> ret = manager.getUserLevelFilters(entityType, userContext,null);
 		if (ret == null) {
 			return new ArrayList<Filter>();
 		}

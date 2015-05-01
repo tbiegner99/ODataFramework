@@ -1,10 +1,12 @@
-package com.tj.dao.hibernate;
+package com.tj.hibernate.dao.query;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import org.odata4j.edm.EdmSimpleType;
 
 import com.tj.dao.filter.AllFilter;
 import com.tj.dao.filter.AndFilter;
@@ -36,11 +38,12 @@ public class HibernateWhereClause extends WhereClause {
 
 	@Override
 	public String asString() {
-		if (getClausesCollection().isEmpty()) {
+		List<Filter> securityFilters=getClausesWithSecurity();
+		if (getClausesCollection().isEmpty() && securityFilters==null || securityFilters.isEmpty()) {
 			return "";
 		}
 		String ret = "WHERE ";
-		Filter joined=BasicFilter.joinFilters(getClausesWithSecurity());
+		Filter joined=BasicFilter.joinFilters(securityFilters);
 		VariableScope<Class<?>> variableScope=new VariableScope<Class<?>>(getOwner().getEntityType());
 		ret += filterToString(joined, joined.getClass(),variableScope);
 		return ret;
@@ -137,6 +140,8 @@ public class HibernateWhereClause extends WhereClause {
 					}
 				} else if(Number.class.isAssignableFrom(fieldType)) {
 					value=EdmJavaTypeConverter.convertNumber((Number) value, (Class<Number>) fieldType);
+				} else if(EdmSimpleType.DATETIME.getJavaTypes().contains(fieldType)) {
+					value=EdmJavaTypeConverter.convertToClass(EdmSimpleType.DATETIME, value,fieldType);
 				}
 				String name = "where_" + getParameters().size();
 				getParameters().add(new Parameter(name, value));

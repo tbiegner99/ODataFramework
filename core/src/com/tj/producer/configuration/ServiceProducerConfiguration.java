@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.odata4j.edm.EdmDataServices;
+import org.odata4j.edm.EdmGenerator;
 import org.odata4j.producer.QueryInfo;
 
 import com.tj.exceptions.IllegalOperationException;
@@ -14,12 +16,16 @@ import com.tj.odata.functions.FunctionInfo;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
 import com.tj.odata.functions.FunctionService;
 import com.tj.odata.functions.InvokableFunction;
+import com.tj.odata.proxy.ProxyService;
 import com.tj.odata.service.CompositeService;
 import com.tj.odata.service.Service;
+import com.tj.producer.GenericEdmGenerator;
 import com.tj.producer.KeyMap;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
 import com.tj.producer.media.MediaResolverFactory;
+import com.tj.producer.media.PackageScanMediaResolverFactory;
+import com.tj.security.CompositeSecurityManager;
 
 public class ServiceProducerConfiguration implements ProducerConfiguration {
 	// possilbly expand this to one class for multiple services
@@ -29,6 +35,9 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	private Map<FunctionName, FunctionInfo> functions;
 	private Map<Class<?>, MediaResolverFactory> mediaEntities;
 	private int maxResults=500;
+	private EdmDataServices metadata;
+	private GenericEdmGenerator edm;
+	private CompositeSecurityManager securityManager;
 
 	public ServiceProducerConfiguration(Collection<? extends Service<?>> services) {
 		this();
@@ -58,7 +67,12 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 		this.functionServices = new HashMap<FunctionName, InvokableFunction>();
 		this.mediaEntities = new HashMap<>();
 	}
-
+	public void setAdditionalMediaResolverPackages(String... packages) {
+		PackageScanMediaResolverFactory fact=PackageScanMediaResolverFactory.createForPackages(packages);
+		for(Class<?> clazz : fact.getSupportedClasses()) {
+			mediaEntities.put(clazz, fact);
+		}
+	}
 	public void setServices(Collection<? extends Service<?>> services) {
 		setUp(services);
 	}
@@ -108,7 +122,9 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	private void setUpMediaEntity(Class<?> clazz) {
 		MediaResolverFactory factory = MediaResolverFactory.createFromClass(clazz);
 		if (factory != null) {
-			mediaEntities.put(clazz, factory);
+			for(Class<?> clazz2 : factory.getSupportedClasses()) {
+				mediaEntities.put(clazz2, factory);
+			}
 		}
 	}
 
@@ -118,14 +134,24 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 				CompositeService service = (CompositeService) s;
 				for (Class<?> clazz : service.getTypes()) {
 					classes.put(clazz.getSimpleName(), clazz);
-					services.put(clazz, service);
+					if(s instanceof ProxyService<?>) {
+						services.put(clazz, ((ProxyService<?>)service).getProxy());
+					} else {
+						services.put(clazz, service);
+					}
 					setUpMediaEntity(clazz);
 				}
 				continue;
 			} else {
 				Class<?> clazz = s.getServiceType();
 				classes.put(clazz.getSimpleName(), clazz);
-				services.put(clazz, s);
+				if(s instanceof ProxyService<?>) {
+					Service<?> service=((ProxyService<?>)s).getProxy();
+					if(service==null) {service=s;}
+					services.put(clazz,service);
+				} else {
+					services.put(clazz, s);
+				}
 				setUpMediaEntity(clazz);
 			}
 
@@ -192,11 +218,11 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public Object invoke(FunctionName functionName, Map<String, Object> parameters, RequestContext request,
-			ResponseContext response) {
+			ResponseContext response,ProducerConfiguration config) {
 		if (!hasFunction(functionName)) {
 			throw new IllegalArgumentException("Function Not supported: " + functionName.getHttpMethod());
 		}
-		return functionServices.get(functionName).invoke(functionName, parameters, request, response);
+		return functionServices.get(functionName).invoke(functionName, parameters, request, response,this);
 	}
 
 	@Override
@@ -221,6 +247,7 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	}
 
 
+	@Override
 	public void setMaxResults(int maxResults) {
 		this.maxResults = maxResults;
 	}
@@ -228,5 +255,38 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	public Service<?> getServiceForClass(Class<?> clazz) {
 		return services.get(clazz);
 	}
+
+	@Override
+	public CompositeSecurityManager getSecurityManager() {
+		return securityManager;
+	}
+
+	@Override
+	public EdmGenerator getEdmGenerator() {
+		return edm;
+	}
+
+	@Override
+	public EdmDataServices getMetadata() {
+		if(metadata==null) {
+			return refreshMetadata();
+		}
+		return this.metadata;
+	}
+
+	@Override
+	public void setSecurityManager(CompositeSecurityManager securityManager) {
+		this.securityManager=securityManager;
+
+	}
+
+	@Override
+	public EdmDataServices refreshMetadata() {
+		edm=new GenericEdmGenerator(this);
+		this.metadata=edm.generateEdm(null).build();
+		return getMetadata();
+	}
+
+
 
 }

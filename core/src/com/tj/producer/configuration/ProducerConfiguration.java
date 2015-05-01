@@ -3,10 +3,14 @@ package com.tj.producer.configuration;
 import java.util.Collection;
 import java.util.Map;
 
+import org.odata4j.edm.EdmDataServices;
+import org.odata4j.edm.EdmGenerator;
+
 import com.tj.odata.functions.FunctionService;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
 import com.tj.producer.media.MediaResolverFactory;
+import com.tj.security.CompositeSecurityManager;
 
 public interface ProducerConfiguration extends FunctionService {
 	public static enum Action {
@@ -28,5 +32,17 @@ public interface ProducerConfiguration extends FunctionService {
 	public void close();
 
 	public int getMaxResults();
+
+	public void setMaxResults(int maxResults);
+
+	public CompositeSecurityManager getSecurityManager();
+
+	public void setSecurityManager(CompositeSecurityManager securityManager);
+
+	public EdmGenerator getEdmGenerator();
+
+	public EdmDataServices getMetadata();
+
+	public EdmDataServices refreshMetadata();
 
 }

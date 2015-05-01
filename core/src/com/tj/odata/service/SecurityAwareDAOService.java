@@ -14,10 +14,10 @@ import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
 import com.tj.producer.util.ReflectionUtil;
 import com.tj.security.SecurityManager;
-import com.tj.security.User;
+import com.tj.security.user.User;
 
 @Transactional
-public class SecurityAwareDAOService<T> implements Service<T> {
+public class SecurityAwareDAOService<T> extends AbstractService<T> implements Service<T> {
 	private SecurityAwareDAO<T> dao;
 
 	public SecurityAwareDAOService(SecurityAwareDAO<T> dao) {

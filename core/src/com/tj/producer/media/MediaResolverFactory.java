@@ -2,6 +2,8 @@ package com.tj.producer.media;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import com.tj.producer.annotations.entity.Binary;
 import com.tj.producer.annotations.entity.ContentDisposition;
@@ -11,7 +13,7 @@ public abstract class MediaResolverFactory {
 
 	public static MediaResolverFactory createFromClass(Class<?> clazz) {
 		if (MediaEntity.class.isAssignableFrom(clazz)) {
-			return new InterfaceMediaResolverFactory();
+			return new InterfaceMediaResolverFactory(clazz);
 		} else {
 			ReflectionResolver content = null, contentType = null, contentDisposition = null;
 			for (Method m : clazz.getMethods()) {
@@ -48,7 +50,7 @@ public abstract class MediaResolverFactory {
 			}
 
 			if (content != null && contentType != null) {
-				return new ReflectionMediaResolverFactory(content, contentType, contentDisposition);
+				return new ReflectionMediaResolverFactory(content, contentType, contentDisposition,clazz);
 			}
 		}
 		return null;
@@ -56,11 +58,25 @@ public abstract class MediaResolverFactory {
 
 	public abstract MediaResolver createMediaResolver(Object entity);
 
+	public abstract Collection<Class<?>> getSupportedClasses();
+
 	private static class InterfaceMediaResolverFactory extends MediaResolverFactory {
 
+		private Class<?> supportedClass;
+
+		public InterfaceMediaResolverFactory(Class<?> type) {
+			supportedClass=type;
+		}
 		@Override
 		public MediaResolver createMediaResolver(Object entity) {
 			return new MediaEntityMediaResolver((MediaEntity) entity);
+		}
+
+		@Override
+		public Collection<Class<?>> getSupportedClasses() {
+			ArrayList<Class<?>> ret=new ArrayList<Class<?>>();
+			ret.add(supportedClass);
+			return ret;
 		}
 
 	}
@@ -68,17 +84,26 @@ public abstract class MediaResolverFactory {
 	private static class ReflectionMediaResolverFactory extends MediaResolverFactory {
 
 		private ReflectionResolver content, contentType, contentDisposition;
+		private Class<?> supportedClass;
 
 		public ReflectionMediaResolverFactory(ReflectionResolver content, ReflectionResolver contentType,
-				ReflectionResolver contentDisposition) {
+				ReflectionResolver contentDisposition,Class<?> supportedClass) {
 			this.content = content;
 			this.contentDisposition = contentDisposition;
 			this.contentType = contentType;
+			this.supportedClass=supportedClass;
 		}
 
 		@Override
 		public MediaResolver createMediaResolver(Object entity) {
 			return new ReflectionMediaResolver(entity, content, contentType, contentDisposition);
+		}
+
+		@Override
+		public Collection<Class<?>> getSupportedClasses() {
+				ArrayList<Class<?>> ret=new ArrayList<Class<?>>();
+				ret.add(supportedClass);
+				return ret;
 		}
 
 	}

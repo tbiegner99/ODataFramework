@@ -3,11 +3,12 @@ package com.tj.odata.service;
 import java.util.Collection;
 
 import org.odata4j.producer.QueryInfo;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.tj.producer.KeyMap;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
-
+@Transactional
 public interface Service<T> {
 
 	public Class<? extends T> getServiceType();

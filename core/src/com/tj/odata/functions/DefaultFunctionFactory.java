@@ -5,7 +5,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.tj.odata.functions.FunctionInfo.FunctionName;
-
+/***
+ * A default implementation of a function
+ * @author tbiegner
+ *
+ * @param <T>
+ */
 public class DefaultFunctionFactory<T extends Function> implements FunctionFactory<T> {
 	private Map<FunctionName, T> functions;
 
@@ -21,10 +26,6 @@ public class DefaultFunctionFactory<T extends Function> implements FunctionFacto
 	}
 
 	protected Collection<T> getFunctions() {
-		return functions.values();
-	}
-
-	protected Collection<T> getItems() {
 		return functions.values();
 	}
 

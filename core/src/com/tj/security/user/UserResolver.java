@@ -1,4 +1,4 @@
-package com.tj.security;
+package com.tj.security.user;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.SecurityContext;

@@ -1,4 +1,4 @@
-package com.tj.dao.hibernate;
+package com.tj.dao.hibernate.function;
 
 import org.hibernate.Session;
 

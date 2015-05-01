@@ -15,7 +15,7 @@ import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
 
 @SuppressWarnings({ "unchecked", "rawtypes" })
-public abstract class AbstractCompositeService implements CompositeService {
+public abstract class AbstractCompositeService extends AbstractService<Object> implements CompositeService {
 	private Map<Class<?>, Service<?>> services;
 
 	public AbstractCompositeService(Collection<Class<?>> classes) {
@@ -128,7 +128,6 @@ public abstract class AbstractCompositeService implements CompositeService {
 				ParameterizedType pt = (ParameterizedType) type;
 				Class<?> rawType = (Class<?>) pt.getRawType();
 				if (Service.class.isAssignableFrom(rawType)) {
-					// if (pt.getRawType() == Service.class) {
 					Class<?> toAdd = getTypeOfService((Class<? extends Service>) rawType);
 					ret.add(toAdd);
 				}

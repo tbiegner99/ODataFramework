@@ -16,7 +16,7 @@ import org.odata4j.producer.QueryInfo;
 
 import com.tj.security.CompositeSecurityManager;
 import com.tj.security.SecurityManager;
-import com.tj.security.User;
+import com.tj.security.user.User;
 
 public class RequestContext {
 	private Map<String, String> headers;
@@ -172,9 +172,14 @@ public class RequestContext {
 		KeyMap map = KeyMap.fromOEntityKey(key);
 		return new RequestContext(mapFromODataContext(ocontext), objects, null, map, requestContext, manager, user);
 	}
-
+	public static RequestContext createRequestContext(QueryInfo info,Class<?> type, CompositeSecurityManager manager, User user) {
+		return RequestContext.createRequestContext(null,info,type,null,manager,user);
+	}
 	private static Map<String, String> mapFromODataContext(ODataContext context) {
 		Map<String, String> ret = new HashMap<String, String>();
+		if(context==null) {
+			return ret;
+		}
 		ODataHeadersContext headers = context.getRequestHeadersContext();
 		if (headers != null) {
 			for (String s : headers.getRequestHeaderFieldNames()) {

@@ -19,6 +19,7 @@ import org.reflections.Reflections;
 
 import com.tj.exceptions.NoSuchPropertyException;
 import com.tj.exceptions.PropertyError;
+import com.tj.producer.annotations.entity.IgnoreType;
 
 public class ReflectionUtil {
 	public static Collection<Class<?>> getMarkedClassesInPackage(String packageName, Class<? extends Annotation> marker) {
@@ -77,7 +78,7 @@ public class ReflectionUtil {
 		for (String packageName : packages) {
 			Reflections reflect = createReflectionsObject(packageName);
 			for (Class<? extends T> candidate : reflect.getSubTypesOf(superType)) {
-				if (!ignoreSet.contains(candidate)) {
+				if (!ignoreSet.contains(candidate) && !candidate.isAnnotationPresent(IgnoreType.class)) {
 					ret.add(candidate);
 				}
 			}
@@ -204,7 +205,7 @@ public class ReflectionUtil {
 				throw new NoSuchPropertyException("Invalid poperty in select or expand path: " + fieldName);
 			}
 		} catch (SecurityException | IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
-			throw new PropertyError("Unable to get property in object: " + fieldName);
+			throw new PropertyError("Unable to get property in object: " + fieldName,e);
 		}
 	}
 

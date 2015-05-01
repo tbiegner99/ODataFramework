@@ -2,6 +2,7 @@ package com.tj.dao.filter;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.odata4j.exceptions.NotImplementedException;
 import org.odata4j.expression.AggregateAllFunction;
@@ -120,6 +121,17 @@ public class BasicFilter implements Filter {
 	public static Filter fromExpression(String filterExp) {
 		BoolCommonExpression exp=OptionsQueryParser.parseFilter(filterExp);
 		return BasicFilter.fromExpression(exp);
+	}
+
+	public static BoolCommonExpression toExpression(List<String> filters) {
+		if(filters==null || filters.isEmpty()) {
+			return org.odata4j.expression.Expression.boolean_(true);
+		}
+		BoolCommonExpression exp=OptionsQueryParser.parseFilter(filters.get(0));
+		for(int i=1;i<filters.size();i++) {
+			exp=org.odata4j.expression.Expression.and(exp, OptionsQueryParser.parseFilter(filters.get(i)));
+		}
+		return exp;
 	}
 
 }

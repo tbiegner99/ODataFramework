@@ -83,35 +83,43 @@ public class ObjectMerger {
 	private <S,T> T mergeObjects(S subject, T target, boolean doPatch) {
 		Class<?> targetClass = target.getClass();
 		Class<?> subjectClass = subject.getClass();
-		for (Field targetField : targetClass.getDeclaredFields()) {
-			try {
-				Field subjectField = subjectClass.getDeclaredField(targetField.getName());
-				if(targetField.isAnnotationPresent(IgnoreUpdate.class) || subjectField.isAnnotationPresent(IgnoreUpdate.class)) {
-					continue;
-				}
-				if(Modifier.isStatic(targetField.getModifiers()) || Modifier.isStatic(subjectField.getModifiers())) {
-					continue;
-				}
-				if (isCompatableCollection(subjectField, targetField)) {
-					if (!doPatch && targetField.get(target) != null) {
-						((Collection<?>) targetField.get(target)).clear();
+		while(targetClass!=Object.class) {
+			for (Field targetField : targetClass.getDeclaredFields()) {
+				try {
+					Field subjectField = subjectClass.getDeclaredField(targetField.getName());
+					if(targetField.isAnnotationPresent(IgnoreUpdate.class) || subjectField.isAnnotationPresent(IgnoreUpdate.class)) {
+						continue;
 					}
-					tryToMergeCollections((Collection<?>) ReflectionUtil.invokeGetter(subject, targetField.getName()), target, targetField);
-					continue;
-				}
-				if (!targetField.getType().isAssignableFrom(subjectField.getType())) {
-					continue;
-				}
-				Object value = ReflectionUtil.getField(subject, subjectField);
-				// primitives cant be null
-				if (value == null && (doPatch || subjectField.getType().isPrimitive())) {
-					continue;
-				}
+					if(Modifier.isStatic(targetField.getModifiers()) || Modifier.isStatic(subjectField.getModifiers())) {
+						continue;
+					}
+					if (isCompatableCollection(subjectField, targetField)) {
+						if (!doPatch && targetField.get(target) != null) {
+							((Collection<?>) targetField.get(target)).clear();
+						}
+						tryToMergeCollections((Collection<?>) ReflectionUtil.invokeGetter(subject, targetField.getName()), target, targetField);
+						continue;
+					}
+					if (!targetField.getType().isAssignableFrom(subjectField.getType())) {
+						continue;
+					}
+					Object value = ReflectionUtil.getField(subject, subjectField);
+					// primitives cant be null
+					if (value == null && (doPatch || subjectField.getType().isPrimitive())) {
+						continue;
+					}
 
-				ReflectionUtil.setField(target, targetField, value);
-			} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException | ClassCastException | InstantiationException e) {
-				// maybe log here? Maybe a warning.
-				continue;
+					ReflectionUtil.setField(target, targetField, value);
+				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException | ClassCastException | InstantiationException e) {
+					// maybe log here? Maybe a warning.
+					continue;
+				}
+			}
+			if(targetClass==subjectClass) { //for the same types, work up the heirarchy chain
+				targetClass=targetClass.getSuperclass();
+				subjectClass=subjectClass.getSuperclass();
+			} else {
+				break;
 			}
 		}
 		return target;

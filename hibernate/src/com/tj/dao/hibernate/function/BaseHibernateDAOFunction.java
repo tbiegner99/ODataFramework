@@ -1,4 +1,4 @@
-package com.tj.dao.hibernate;
+package com.tj.dao.hibernate.function;
 
 import java.util.Map;
 
@@ -8,6 +8,7 @@ import com.tj.odata.functions.FunctionInfo;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
+import com.tj.producer.configuration.ProducerConfiguration;
 
 public abstract class BaseHibernateDAOFunction implements HibernateDAOFunction {
 
@@ -18,7 +19,7 @@ public abstract class BaseHibernateDAOFunction implements HibernateDAOFunction {
 
 	@Override
 	public abstract Object invoke(FunctionName name, Map<String, Object> parameters, RequestContext request,
-			ResponseContext response);
+			ResponseContext response,ProducerConfiguration cfg);
 
 	@Override
 	public void setSession(Session session) {

@@ -6,8 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /***
- * 
- * @author Admin
+ * A simple class level marker for an OData Entity class. This CAN be used to scan packages
+ * for this annotation to define models. Other annotations may be used as well.
+ * @author tbiegner
  *
  */
 @Retention(RetentionPolicy.RUNTIME)

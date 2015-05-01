@@ -1,4 +1,4 @@
-package com.tj.security;
+package com.tj.security.user;
 
 public interface User {
 	Object getUniqueId();

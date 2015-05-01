@@ -66,6 +66,15 @@ public class KeyMap implements Serializable {
 		return null;
 	}
 
+	public static String getSingleKeyPropertyName(Class<?> entity) {
+		for(Field f : entity.getDeclaredFields()) {
+			if (f.isAnnotationPresent(Key.class) || f.isAnnotationPresent(Id.class)) {
+				return f.getName();
+			}
+		}
+		return null;
+	}
+
 	public static KeyMap fromOEntityKey(OEntityKey key) {
 		KeyMap ret = new KeyMap();
 		if (key.getKeyType() == KeyType.SINGLE) {
@@ -76,6 +85,11 @@ public class KeyMap implements Serializable {
 				ret.keys.put(v.getName(), v.getValue());
 			}
 		}
+		return ret;
+	}
+	public static KeyMap createFromSingleKey(Class<?> type, Object key) {
+		KeyMap ret=new KeyMap();
+		ret.keys.put(getSingleKeyPropertyName(type), key);
 		return ret;
 	}
 

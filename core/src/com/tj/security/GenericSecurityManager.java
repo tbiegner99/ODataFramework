@@ -7,6 +7,8 @@ import java.util.Map;
 
 import com.tj.dao.filter.Filter;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
+import com.tj.producer.configuration.ProducerConfiguration;
+import com.tj.security.user.User;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class GenericSecurityManager implements CompositeSecurityManager {
@@ -94,86 +96,86 @@ public class GenericSecurityManager implements CompositeSecurityManager {
 	}
 
 	@Override
-	public boolean canReadEntity(Class<? extends Object> type, User u) {
+	public boolean canReadEntity(Class<? extends Object> type, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(type);
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
-		return manager.canReadEntity(type, u);
+		return manager.canReadEntity(type, u,appContext);
 	}
 
 	@Override
-	public boolean canWriteEntity(Object entity, User u) {
+	public boolean canWriteEntity(Object entity, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
 		return ((SecurityManager<Object, User>) getSecurityManagerForClass(entity.getClass()))
-				.canWriteEntity(entity, u);
+				.canWriteEntity(entity, u,appContext);
 	}
 
 	@Override
-	public boolean canUpdateEntity(Object entity, User u) {
+	public boolean canUpdateEntity(Object entity, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
 		return ((SecurityManager<Object, User>) getSecurityManagerForClass(entity.getClass())).canUpdateEntity(entity,
-				u);
+				u,appContext);
 	}
 
 	@Override
-	public boolean canDeleteEntity(Class<? extends Object> type, User u) {
+	public boolean canDeleteEntity(Class<? extends Object> type, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(type);
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
-		return ((SecurityManager<Object, User>) getSecurityManagerForClass(type)).canDeleteEntity(type, u);
+		return ((SecurityManager<Object, User>) getSecurityManagerForClass(type)).canDeleteEntity(type, u,appContext);
 	}
 
 	@Override
-	public boolean canAccessProperty(Object entity, String property, User u) {
+	public boolean canAccessProperty(Object entity, String property, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
 		return ((SecurityManager<Object, User>) getSecurityManagerForClass(entity.getClass())).canAccessProperty(
-				entity, property, u);
+				entity, property, u,appContext);
 	}
 
 	@Override
-	public boolean canReadProperty(Object entity, String property, User u) {
+	public boolean canReadProperty(Object entity, String property, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
 		return ((SecurityManager<Object, User>) getSecurityManagerForClass(entity.getClass())).canReadProperty(entity,
-				property, u);
+				property, u,appContext);
 	}
 
 	@Override
-	public boolean canWriteProperty(Object entity, String property, User u) {
+	public boolean canWriteProperty(Object entity, String property, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
 		return ((SecurityManager<Object, User>) getSecurityManagerForClass(entity.getClass())).canWriteProperty(entity,
-				property, u);
+				property, u,appContext);
 	}
 
 	@Override
-	public boolean canUpdateProperty(Object entity, String property, User u) {
+	public boolean canUpdateProperty(Object entity, String property, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
 		return ((SecurityManager<Object, User>) getSecurityManagerForClass(entity.getClass())).canUpdateProperty(
-				entity, property, u);
+				entity, property, u,appContext);
 	}
 
 	@Override
-	public Object getPropertyValueForCreate(Object entity, Object supplied, String property, User u) {
-		if (!canWriteProperty(entity, property, u)) {
+	public Object getPropertyValueForCreate(Object entity, Object supplied, String property, User u,ProducerConfiguration appContext) {
+		if (!canWriteProperty(entity, property, u,appContext)) {
 			throw new IllegalAccessError("User does not have permission to create an object with the property: "
 					+ property);
 		}
@@ -181,49 +183,49 @@ public class GenericSecurityManager implements CompositeSecurityManager {
 		if (manager == null) {
 			return supplied;
 		}
-		return manager.getPropertyValueForCreate(entity, supplied, property, u);
+		return manager.getPropertyValueForCreate(entity, supplied, property, u,appContext);
 	}
 
 	@Override
-	public Object getPropertyValueForUpdate(Object entity, Object supplied, String property, User u) {
-		if (!canUpdateProperty(entity, property, u)) {
+	public Object getPropertyValueForUpdate(Object entity, Object supplied, String property, User u,ProducerConfiguration appContext) {
+		if (!canUpdateProperty(entity, property, u,appContext)) {
 			throw new IllegalAccessError("User does not have permission to update the property: " + property);
 		}
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return supplied;
 		}
-		return manager.getPropertyValueForUpdate(entity, supplied, property, u);
+		return manager.getPropertyValueForUpdate(entity, supplied, property, u,appContext);
 	}
 
 	@Override
-	public Object getPropertyValueForRead(Object entity, Object supplied, String property, User u) {
-		if (!canReadProperty(entity, property, u)) {
+	public Object getPropertyValueForRead(Object entity, Object supplied, String property, User u,ProducerConfiguration appContext) {
+		if (!canReadProperty(entity, property, u,appContext)) {
 			throw new IllegalAccessError("User does not have permission to read the property: " + property);
 		}
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return supplied;
 		}
-		return manager.getPropertyValueForRead(entity, supplied, property, u);
+		return manager.getPropertyValueForRead(entity, supplied, property, u,appContext);
 	}
 
 	@Override
-	public Collection<Filter> getUserLevelFilters(Class<Object> clazz, User u) {
+	public Collection<Filter> getUserLevelFilters(Class<Object> clazz, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(clazz);
 		if (manager == null) {
 			return new ArrayList<Filter>();
 		}
-		return manager.getUserLevelFilters(clazz, u);
+		return manager.getUserLevelFilters(clazz, u,appContext);
 	}
 
 	@Override
-	public Map<String, Object> getFilterParameters(Class<Object> clazz, User u) {
+	public Map<String, Object> getFilterParameters(Class<Object> clazz, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(clazz);
 		if (manager == null) {
 			return new HashMap<String, Object>();
 		}
-		return manager.getFilterParameters(clazz, u);
+		return manager.getFilterParameters(clazz, u,appContext);
 	}
 
 	public Map<Class<?>, SecurityManager> getEntityTypeSecurity() {
@@ -243,13 +245,16 @@ public class GenericSecurityManager implements CompositeSecurityManager {
 	}
 
 	@Override
-	public boolean canReadEntity(Object entity, User u) {
+	public boolean canReadEntity(Object entity, User u,ProducerConfiguration appContext) {
 		SecurityManager manager = getSecurityManagerForClass(entity.getClass());
 		if (manager == null) {
 			return allowedIfNoManager;
 		}
-		return manager.canReadEntity(entity, u);
+		return manager.canReadEntity(entity, u,appContext);
 	}
 
+	protected Collection<SecurityManager> getAllSecurityManagers() {
+		return entityTypeSecurity.values();
+	}
 
 }

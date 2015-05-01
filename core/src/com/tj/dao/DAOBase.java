@@ -6,7 +6,13 @@ import java.util.Map;
 import org.odata4j.producer.QueryInfo;
 
 import com.tj.producer.KeyMap;
-
+/***
+ * The Base interface for all data access object. Implementors may implement basic
+ * Crud operations used in odata, as well as optional filter based batch operations.
+ * @author tbiegner
+ *
+ * @param <T>
+ */
 public interface DAOBase<T> {
 	T createEntity(T entity);
 

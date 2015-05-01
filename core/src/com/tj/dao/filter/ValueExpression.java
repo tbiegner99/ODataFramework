@@ -1,5 +1,8 @@
 package com.tj.dao.filter;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.odata4j.expression.BinaryLiteral;
 import org.odata4j.expression.BooleanLiteral;
 import org.odata4j.expression.ByteLiteral;
@@ -77,6 +80,11 @@ public class ValueExpression implements Expression {
 			return new ValueExpression(value);
 		}
 		throw new RuntimeException("Unsopported expression literal: " + exp.getClass().getSimpleName());
+	}
+
+	public static String toDateTime(Date date) {
+		SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+		return "datetime'"+dateFormat.format(new Date())+"'";
 	}
 
 }

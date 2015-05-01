@@ -1,6 +1,7 @@
 package com.tj.security;
 
 import com.tj.odata.functions.FunctionInfo.FunctionName;
+import com.tj.security.user.User;
 
 public interface CompositeSecurityManager extends SecurityManager<Object, User> {
 

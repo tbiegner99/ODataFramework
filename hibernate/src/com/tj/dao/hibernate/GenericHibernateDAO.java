@@ -14,6 +14,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.type.Type;
+import org.odata4j.exceptions.BadRequestException;
 import org.odata4j.producer.QueryInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -21,9 +22,11 @@ import com.tj.dao.SecurityAwareDAO;
 import com.tj.dao.filter.Query.QueryType;
 import com.tj.exceptions.DataConflictException;
 import com.tj.exceptions.IllegalRequestException;
+import com.tj.hibernate.dao.query.HibernateOrderBy;
+import com.tj.hibernate.dao.query.HibernateQuery;
 import com.tj.producer.KeyMap;
 import com.tj.security.SecurityManager;
-import com.tj.security.User;
+import com.tj.security.user.User;
 
 public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	private static final int DEFAULT_SKIP = 0;
@@ -52,6 +55,12 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	}
 
 	private Session getSession() {
+		//TODO: Implement scoped (thread specific) sessions with transactions
+		try{
+			session=factory.getCurrentSession();
+		}catch(Exception e) {
+			//TODO: log;
+		}
 		if (session == null){// || !session.isOpen()) {
 			session = factory.openSession();
 		}
@@ -90,8 +99,10 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	public T createEntity(T entity, SecurityManager<T, ?> manager, User user) {
 		try {
 			cascadeSave(entity,new HashSet<Object>());
+			//should not have to
+			getSession().flush();
 			getSession().refresh(entity);
-		} catch(ConstraintViolationException e) {
+		} catch(ConstraintViolationException | org.hibernate.NonUniqueObjectException e) {
 			throw new DataConflictException("A data contraint would be violated with ths action. The action was not completed successfully.",e);
 		} catch (RuntimeException e) {
 			getSession().clear();
@@ -201,11 +212,21 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	@Override
 	public Collection<T> getEntities(QueryInfo info, SecurityManager<T, ?> manager, User user) {
 		int top = DEFAULT_TOP, skip = DEFAULT_SKIP;
+		int skipToken=0;
+		if(info.skipToken!=null) {
+			try{
+				skipToken=Integer.parseInt(info.skipToken);
+			} catch(NumberFormatException e) {
+				throw new BadRequestException("Invalid skip token: "+info.skipToken+"- Must be an integer.");
+			}
+		}
 		if (info.top != null && info.top > 0) {
 			top = info.top;
 		}
 		if (info.skip != null && info.skip > 0) {
-			skip = info.skip;
+			skip = info.skip+skipToken;
+		} else if(skipToken>0){
+			skip=skipToken;
 		}
 		HibernateQuery<T> q = new HibernateQuery<T>(QueryType.RETRIEVE, type, top, skip,
 				(SecurityManager<T, User>) manager, user);

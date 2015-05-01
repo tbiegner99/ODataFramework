@@ -15,10 +15,13 @@ import org.hibernate.cfg.NotYetImplementedException;
 import org.odata4j.core.NamedValue;
 import org.odata4j.core.OEntityKey;
 import org.odata4j.core.OEntityKey.KeyType;
+import org.odata4j.edm.EdmDataServices;
+import org.odata4j.edm.EdmGenerator;
 
 import com.tj.odata.functions.FunctionInfo;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
 import com.tj.producer.EntityKey;
+import com.tj.producer.GenericEdmGenerator;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
 import com.tj.producer.annotations.CreateEntity;
@@ -30,6 +33,7 @@ import com.tj.producer.invoker.ArgumentResolver;
 import com.tj.producer.invoker.HeaderArgumentResolver;
 import com.tj.producer.invoker.RequestContextResolver;
 import com.tj.producer.media.MediaResolverFactory;
+import com.tj.security.CompositeSecurityManager;
 
 public class AnnotationProducerConfiguration implements ProducerConfiguration {
 	private Map<String, Class<?>> edmTypes;
@@ -39,6 +43,9 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 	private Map<FunctionName, Invoker> functionInvokers;
 	private Map<Class<?>, MediaResolverFactory> mediaEntities;
 	private int maxResults=500;
+	private EdmGenerator edm;
+	private EdmDataServices metadata;
+	private CompositeSecurityManager securityManager;
 
 	public AnnotationProducerConfiguration(List<Object> services) {
 		edmTypes = new HashMap<String, Class<?>>();
@@ -48,6 +55,11 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 		functionInvokers = new HashMap<FunctionName, Invoker>();
 		mediaEntities = new HashMap<Class<?>, MediaResolverFactory>();
 		setUpConfig(services);
+		refreshMetadata();
+	}
+	public AnnotationProducerConfiguration(List<Object> services,CompositeSecurityManager securityManager) {
+		this(services);
+		this.securityManager=securityManager;
 	}
 
 	@Override
@@ -266,7 +278,7 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public Object invoke(FunctionName name, Map<String, Object> parameters, RequestContext request,
-			ResponseContext response) {
+			ResponseContext response,ProducerConfiguration config) {
 		if (!hasFunction(name)) {
 			throw new IllegalArgumentException("Function not found: " + name.getName());
 		}
@@ -293,8 +305,39 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 	}
 
 
+	@Override
 	public void setMaxResults(int maxResults) {
 		this.maxResults = maxResults;
+	}
+
+	@Override
+	public CompositeSecurityManager getSecurityManager() {
+		return securityManager;
+	}
+
+	@Override
+	public EdmGenerator getEdmGenerator() {
+		return edm;
+	}
+
+	@Override
+	public EdmDataServices getMetadata() {
+		if(metadata==null) {
+			refreshMetadata();
+		}
+		return metadata;
+	}
+
+	@Override
+	public EdmDataServices refreshMetadata() {
+		edm=new GenericEdmGenerator(this);
+		metadata=edm.generateEdm(null).build();
+		return getMetadata();
+	}
+	@Override
+	public void setSecurityManager(CompositeSecurityManager securityManager) {
+		this.securityManager=securityManager;
+
 	}
 
 }

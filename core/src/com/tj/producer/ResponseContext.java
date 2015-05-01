@@ -18,6 +18,7 @@ public interface ResponseContext {
 	 */
 	public static class DefaultResponseContext implements ResponseContext {
 
+		public DefaultResponseContext(){}
 		@Override
 		public void setDateHeader(String name, Date value) {
 		}
