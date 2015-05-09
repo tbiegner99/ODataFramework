@@ -615,6 +615,7 @@ public class GenericProducer implements UserAwareODataProducer {
 			// use security manager to translate returned value into allowed return object
 			ret = security.getReturnValue(ret, requestUser);
 		}
+		//TODO: handle null?
 		if (name.getReturnType().isSimple()) {
 			return Responses.simple((EdmSimpleType<?>) name.getReturnType(),"result", ret);
 		} else if (name.getReturnType() instanceof EdmCollectionType) {

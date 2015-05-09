@@ -8,6 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tj.security.user.User;
 import com.tj.security.user.UserResolver;
 
+/***
+ * Adds a security context to the OData4jODataProducer
+ * @author tbiegner
+ *
+ */
 @Transactional
 public interface UserAwareODataProducer extends ODataProducer {
 	UserResolver<?> getUserResolver();

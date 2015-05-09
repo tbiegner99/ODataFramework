@@ -8,9 +8,9 @@
   <artifactId>OData4jTest-examples</artifactId>
   <dependencies>
   	<dependency>
-  		<groupId>OData4jTest</groupId>
-  		<artifactId>hibernate</artifactId>
-  		<version>0.0.1-SNAPSHOT</version>
+  		<groupId>com.tj</groupId>
+  		<artifactId>ODataFramework-hibernate</artifactId>
+  		<version>0.0.2-SNAPSHOT</version>
   	</dependency>
   </dependencies>
 </project>

@@ -18,7 +18,7 @@ public class PersonService implements Service<Person> {
 
 	@Override
 	public Person createEntity(Class<?> type, RequestContext request, ResponseContext response, Person object) {
-		return dao.createEntity(object);
+		return null;//dao.createEntity(object);
 	}
 
 	@Override
@@ -30,29 +30,29 @@ public class PersonService implements Service<Person> {
 	@Override
 	public Person updateEntity(Class<?> type, RequestContext request, ResponseContext response, Person object,
 			KeyMap keys) {
-		return dao.updateEntity(object, keys);
+		return null;//dao.updateEntity(object, keys);
 	}
 
 	@Override
 	public Person deleteEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys) {
-		return dao.deleteEntity(keys);
+		return null;//dao.deleteEntity(keys);
 	}
 
 	@Override
 	public Person getEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys) {
-		return dao.getEntity(keys);
+		return null;//dao.getEntity(keys);
 	}
 
 	@Override
 	public Collection<Person> getEntities(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info) {
-		return dao.getEntities(info);
+		return null;//dao.getEntities(info);
 	}
 
 	@Override
 	public Long getEntitiesCount(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info) {
-		return (long) dao.countEntities(info);
+		return null;//(long) dao.countEntities(info);
 	}
 
 	@Override

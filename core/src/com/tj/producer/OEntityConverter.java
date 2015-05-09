@@ -112,6 +112,9 @@ public class OEntityConverter {
 	public static Map<String, OProperty<?>> getProperties(EdmDataServices service, List<String> keys,
 			EdmStructuralType type, Object o, PropertyPath select,ProducerConfiguration cfg,User user) {
 		CompositeSecurityManager securityManager=(cfg==null?null:cfg.getSecurityManager());
+		if(type instanceof EdmComplexType && securityManager!=null && securityManager.getSecurityManagerForClass(o.getClass())==null) {
+			securityManager=null;
+		}
 		Map<String, OProperty<?>> props = new HashMap<String, OProperty<?>>();
 		for (EdmProperty prop : type.getProperties()) {
 			try {

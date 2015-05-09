@@ -2,8 +2,8 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.tj</groupId>
-    <artifactId>OData4jTest</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>ODataFramework</artifactId>
+    <version>0.0.2-SNAPSHOT</version>
   </parent>
-  <artifactId>OData4jTest-annotations</artifactId>
+  <artifactId>ODataFramework-annotations</artifactId>
 </project>

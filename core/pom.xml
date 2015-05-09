@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>OData4jTest-core</artifactId>
+  <artifactId>ODataFramework-core</artifactId>
   <packaging>jar</packaging>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -128,14 +128,14 @@
 
   	<dependency>
   		<groupId>com.tj</groupId>
-  		<artifactId>OData4jTest-annotations</artifactId>
+  		<artifactId>ODataFramework-annotations</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
   </dependencies>
  
   <parent>
   	<groupId>com.tj</groupId>
-  	<version>0.0.1-SNAPSHOT</version>
-  	<artifactId>OData4jTest</artifactId>
+  	<version>0.0.2-SNAPSHOT</version>
+  	<artifactId>ODataFramework</artifactId>
   </parent>
 </project>
