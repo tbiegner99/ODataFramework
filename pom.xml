@@ -37,4 +37,13 @@
 			<url>http://192.168.100.21/nexus/content/repositories/trs_snapshot/</url>
 		</snapshotRepository>
 	</distributionManagement>
+    <dependencyManagement>
+    	<dependencies>
+    		<dependency>
+    			<groupId>com.tj</groupId>
+    			<artifactId>ODataFramework-annotations</artifactId>
+    			<version>${project.version}</version>
+    		</dependency>
+    	</dependencies>
+    </dependencyManagement>
 </project>

@@ -8,6 +8,7 @@ import java.util.Map;
 import org.odata4j.edm.EdmDataServices;
 import org.odata4j.edm.EdmGenerator;
 import org.odata4j.producer.QueryInfo;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.tj.exceptions.IllegalOperationException;
 import com.tj.odata.functions.Function;
@@ -34,15 +35,15 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	private Map<FunctionName, InvokableFunction> functionServices;
 	private Map<FunctionName, FunctionInfo> functions;
 	private Map<Class<?>, MediaResolverFactory> mediaEntities;
-<<<<<<< HEAD
 	private int maxResults = 500;
-	private boolean useProxyService = false;
-=======
-	private int maxResults=500;
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
+	private boolean useProxy = false;
 	private EdmDataServices metadata;
 	private GenericEdmGenerator edm;
 	private CompositeSecurityManager securityManager;
+
+	public ServiceProducerConfiguration(Service<?>... services) {
+		this(Arrays.asList(services));
+	}
 
 	public ServiceProducerConfiguration(Collection<? extends Service<?>> services) {
 		this();
@@ -72,7 +73,6 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 		this.functionServices = new HashMap<FunctionName, InvokableFunction>();
 		this.mediaEntities = new HashMap<>();
 	}
-<<<<<<< HEAD
 
 	public void setAdditionalMediaResolverPackages(String... packages) {
 		PackageScanMediaResolverFactory fact = PackageScanMediaResolverFactory.createForPackages(packages);
@@ -81,14 +81,6 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 		}
 	}
 
-=======
-	public void setAdditionalMediaResolverPackages(String... packages) {
-		PackageScanMediaResolverFactory fact=PackageScanMediaResolverFactory.createForPackages(packages);
-		for(Class<?> clazz : fact.getSupportedClasses()) {
-			mediaEntities.put(clazz, fact);
-		}
-	}
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 	public void setServices(Collection<? extends Service<?>> services) {
 		setUp(services);
 	}
@@ -138,11 +130,7 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	private void setUpMediaEntity(Class<?> clazz) {
 		MediaResolverFactory factory = MediaResolverFactory.createFromClass(clazz);
 		if (factory != null) {
-<<<<<<< HEAD
 			for (Class<?> clazz2 : factory.getSupportedClasses()) {
-=======
-			for(Class<?> clazz2 : factory.getSupportedClasses()) {
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 				mediaEntities.put(clazz2, factory);
 			}
 		}
@@ -154,13 +142,8 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 				CompositeService service = (CompositeService) s;
 				for (Class<?> clazz : service.getTypes()) {
 					classes.put(clazz.getSimpleName(), clazz);
-<<<<<<< HEAD
-					if (s instanceof ProxyService<?> && useProxyService) {
+					if (s instanceof ProxyService<?> || !useProxy) {
 						services.put(clazz, ((ProxyService<?>) service).getProxy());
-=======
-					if(s instanceof ProxyService<?>) {
-						services.put(clazz, ((ProxyService<?>)service).getProxy());
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 					} else {
 						services.put(clazz, service);
 					}
@@ -170,19 +153,12 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 			} else {
 				Class<?> clazz = s.getServiceType();
 				classes.put(clazz.getSimpleName(), clazz);
-<<<<<<< HEAD
-				if (s instanceof ProxyService<?> && useProxyService) {
+				if (s instanceof ProxyService<?>) {
 					Service<?> service = ((ProxyService<?>) s).getProxy();
-					if (service == null) {
+					if (service == null || !useProxy) {
 						service = s;
 					}
 					services.put(clazz, service);
-=======
-				if(s instanceof ProxyService<?>) {
-					Service<?> service=((ProxyService<?>)s).getProxy();
-					if(service==null) {service=s;}
-					services.put(clazz,service);
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 				} else {
 					services.put(clazz, s);
 				}
@@ -252,19 +228,11 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public Object invoke(FunctionName functionName, Map<String, Object> parameters, RequestContext request,
-<<<<<<< HEAD
 			ResponseContext response, ProducerConfiguration config) {
 		if (!hasFunction(functionName)) {
 			throw new IllegalArgumentException("Function Not supported: " + functionName.getHttpMethod());
 		}
 		return functionServices.get(functionName).invoke(functionName, parameters, request, response, this);
-=======
-			ResponseContext response,ProducerConfiguration config) {
-		if (!hasFunction(functionName)) {
-			throw new IllegalArgumentException("Function Not supported: " + functionName.getHttpMethod());
-		}
-		return functionServices.get(functionName).invoke(functionName, parameters, request, response,this);
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 	}
 
 	@Override
@@ -282,19 +250,11 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 		return mediaEntities.get(clazz);
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 	@Override
 	public int getMaxResults() {
 		return maxResults;
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 	@Override
 	public void setMaxResults(int maxResults) {
 		this.maxResults = maxResults;
@@ -316,48 +276,32 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public EdmDataServices getMetadata() {
-<<<<<<< HEAD
 		if (metadata == null) {
-=======
-		if(metadata==null) {
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 			return refreshMetadata();
 		}
 		return this.metadata;
 	}
 
+	@Autowired(required = false)
 	@Override
 	public void setSecurityManager(CompositeSecurityManager securityManager) {
-<<<<<<< HEAD
 		this.securityManager = securityManager;
-=======
-		this.securityManager=securityManager;
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 
 	}
 
 	@Override
 	public EdmDataServices refreshMetadata() {
-<<<<<<< HEAD
 		edm = new GenericEdmGenerator(this);
 		this.metadata = edm.generateEdm(null).build();
 		return getMetadata();
 	}
 
-	public boolean isUseProxyService() {
-		return useProxyService;
+	public boolean isUseProxy() {
+		return useProxy;
 	}
 
-	public void setUseProxyService(boolean useProxyService) {
-		this.useProxyService = useProxyService;
+	public void setUseProxy(boolean useProxy) {
+		this.useProxy = useProxy;
 	}
-=======
-		edm=new GenericEdmGenerator(this);
-		this.metadata=edm.generateEdm(null).build();
-		return getMetadata();
-	}
-
-
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 
 }

@@ -117,18 +117,19 @@ public class GenericProducer implements UserAwareODataProducer {
 		edm = config.getEdmGenerator();
 		requestContext = request;
 		responseContext = response;
-		this.resolver=userResolver;
+		this.resolver = userResolver;
 		securityManager = securityContext;
 		metadata = config.getMetadata();
 	}
 
 	public GenericProducer(HttpServletRequest request, ResponseContext response,
-			CompositeSecurityManager securityContext, UserResolver<?> userResolver, ProducerConfiguration config, EdmDataServices metadata) {
+			CompositeSecurityManager securityContext, UserResolver<?> userResolver, ProducerConfiguration config,
+			EdmDataServices metadata) {
 		cfg = config;
 		edm = config.getEdmGenerator();
 		requestContext = request;
 		responseContext = response;
-		this.resolver=userResolver;
+		this.resolver = userResolver;
 		securityManager = securityContext;
 		this.metadata = metadata;
 	}
@@ -139,28 +140,28 @@ public class GenericProducer implements UserAwareODataProducer {
 		}
 		switch (action) {
 			case GET:
-				if(entity==null) {
-					return securityManager.canReadEntity(entityType, requestUser,cfg);
+				if (entity == null) {
+					return securityManager.canReadEntity(entityType, requestUser, cfg);
 				}
-				return securityManager.canReadEntity(entity, requestUser,cfg);
+				return securityManager.canReadEntity(entity, requestUser, cfg);
 			case LIST:
 			case COUNT:
-				return securityManager.canReadEntity(entityType, requestUser,cfg);
+				return securityManager.canReadEntity(entityType, requestUser, cfg);
 			case CREATE:
-				return securityManager.canWriteEntity(entity, requestUser,cfg);
+				return securityManager.canWriteEntity(entity, requestUser, cfg);
 			case DELETE:
-				return securityManager.canDeleteEntity(entityType, requestUser,cfg);
+				return securityManager.canDeleteEntity(entityType, requestUser, cfg);
 			case PATCH:
 			case UPDATE:
-				return securityManager.canUpdateEntity(entity, requestUser,cfg);
+				return securityManager.canUpdateEntity(entity, requestUser, cfg);
 			default:
 				throw new IllegalOperationException("Operation not defined: " + action);
 
 		}
 	}
 
-	private boolean canPerformPropertyAcion(ODataContext odataContext, Action action, Class<?> entityType,Object entity,
-			String propName) {
+	private boolean canPerformPropertyAcion(ODataContext odataContext, Action action, Class<?> entityType,
+			Object entity, String propName) {
 		if (securityManager == null) {
 			return true;
 		}
@@ -168,14 +169,14 @@ public class GenericProducer implements UserAwareODataProducer {
 			case GET:
 			case LIST:
 			case COUNT:
-				return securityManager.canReadProperty(entity, propName, requestUser,cfg);
+				return securityManager.canReadProperty(entity, propName, requestUser, cfg);
 			case CREATE:
-				return securityManager.canWriteProperty(entity, propName, requestUser,cfg);
+				return securityManager.canWriteProperty(entity, propName, requestUser, cfg);
 			case DELETE:
-				return securityManager.canDeleteEntity(entityType, requestUser,cfg);
+				return securityManager.canDeleteEntity(entityType, requestUser, cfg);
 			case PATCH:
 			case UPDATE:
-				return securityManager.canUpdateProperty(entityType, propName, requestUser,cfg);
+				return securityManager.canUpdateProperty(entityType, propName, requestUser, cfg);
 			default:
 				throw new IllegalOperationException("Operation not defined: " + action);
 
@@ -185,8 +186,8 @@ public class GenericProducer implements UserAwareODataProducer {
 	@SuppressWarnings("unchecked")
 	@Override
 	public <TExtension extends OExtension<ODataProducer>> TExtension findExtension(Class<TExtension> clazz) {
-		if(extensionResolver!=null) {
-			return extensionResolver.findExtension(clazz,cfg, securityManager, requestUser);
+		if (extensionResolver != null) {
+			return extensionResolver.findExtension(clazz, cfg, securityManager, requestUser);
 		}
 		if (clazz == OMediaLinkExtensions.class) {
 			return (TExtension) new ApplicationMediaLinkExtensions(cfg, securityManager, requestUser);
@@ -208,13 +209,14 @@ public class GenericProducer implements UserAwareODataProducer {
 	public EntitiesResponse getEntities(ODataContext ocontext, String entitySetName, QueryInfo queryInfo) {
 		Class<?> type = cfg.getEntitySetClass(entitySetName);
 		if (type == null) {
-			throw new NotFoundException("No entity set found with name: "+entitySetName);
+			throw new NotFoundException("No entity set found with name: " + entitySetName);
 		}
 		if (!canPerformEntityAcion(ocontext, Action.LIST, type, null)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
-		if(queryInfo.top==null && cfg.getMaxResults()>0) {
-			queryInfo=new QueryInfo(queryInfo.inlineCount, cfg.getMaxResults(), queryInfo.skip, queryInfo.filter, queryInfo.orderBy, queryInfo.skipToken, queryInfo.customOptions, queryInfo.expand, queryInfo.select);
+		if (queryInfo.top == null && cfg.getMaxResults() > 0) {
+			queryInfo = new QueryInfo(queryInfo.inlineCount, cfg.getMaxResults(), queryInfo.skip, queryInfo.filter,
+					queryInfo.orderBy, queryInfo.skipToken, queryInfo.customOptions, queryInfo.expand, queryInfo.select);
 		}
 		RequestContext context = RequestContext.createRequestContext(ocontext, queryInfo, type, requestContext,
 				securityManager, requestUser);
@@ -225,31 +227,34 @@ public class GenericProducer implements UserAwareODataProducer {
 			if (!canPerformEntityAcion(ocontext, Action.GET, type, item)) {
 				continue;
 			}
-			OEntity entity = OEntityConverter.createOEntity(getMetadata(), item,type, queryInfo,cfg,requestUser);
+			OEntity entity = OEntityConverter.createOEntity(getMetadata(), item, type, queryInfo, cfg, requestUser);
 			ret.add(entity);
 		}
-		String skipToken=generateSkipToken(ret.size(),queryInfo);
+		String skipToken = generateSkipToken(ret.size(), queryInfo);
 		EdmEntitySet set = getMetadata().getEdmEntitySet(entitySetName);
 		Integer inlineCount = null;
 		if (queryInfo.inlineCount == InlineCount.ALLPAGES) {
-			inlineCount =  ((Number)cfg.invoke(entitySetName, Action.COUNT, context, responseContext)).intValue();
+			inlineCount = ((Number) cfg.invoke(entitySetName, Action.COUNT, context, responseContext)).intValue();
 		}
 		return Responses.entities(ret, set, inlineCount, skipToken);
 	}
 
-	private String generateSkipToken(Integer size,QueryInfo queryInfo) {
-		if(size==null) {return null;}
+	private String generateSkipToken(Integer size, QueryInfo queryInfo) {
+		if (size == null) {
+			return null;
+		}
 		Integer skipToken;
-		if(queryInfo.skipToken!=null) {
-			try{
-				skipToken=Integer.parseInt(queryInfo.skipToken)+(queryInfo.skip==null?0:queryInfo.skip)+size;
-			} catch(NumberFormatException e) {
-				throw new BadRequestException("Invalid skip token: "+queryInfo.skipToken+"- Must be an integer.");
+		if (queryInfo.skipToken != null) {
+			try {
+				skipToken = Integer.parseInt(queryInfo.skipToken) + (queryInfo.skip == null ? 0 : queryInfo.skip)
+						+ size;
+			} catch (NumberFormatException e) {
+				throw new BadRequestException("Invalid skip token: " + queryInfo.skipToken + "- Must be an integer.");
 			}
 		} else {
 			skipToken = (queryInfo.skip == null ? size : queryInfo.skip + size);
 		}
-		return ""+skipToken;
+		return "" + skipToken;
 	}
 
 	@Override
@@ -284,21 +289,21 @@ public class GenericProducer implements UserAwareODataProducer {
 		if (o == null || !canPerformEntityAcion(ocontext, Action.GET, type, o)) {
 			throw new NotFoundException("No entity found with this id.");
 		}
-		OEntity response = OEntityConverter.createOEntity(getMetadata(), o,type, queryInfo,cfg,requestUser);
+		OEntity response = OEntityConverter.createOEntity(getMetadata(), o, type, queryInfo, cfg, requestUser);
 		return Responses.entity(response);
 	}
 
-	public BaseResponse getSimpleProp(EdmProperty edmProp, Object prop,QueryInfo info) {
+	public BaseResponse getSimpleProp(EdmProperty edmProp, Object prop, QueryInfo info) {
 		EdmType type = edmProp.getType();
 		OProperty<?> property = null;
 		if (EdmCollectionType.class.isAssignableFrom(type.getClass())) {
 			property = OProperties.collection(edmProp.getName(), (EdmCollectionType) type,
-					OEntityConverter.getCollection(getMetadata(), edmProp, prop,cfg,requestUser,info));
+					OEntityConverter.getCollection(getMetadata(), edmProp, prop, cfg, requestUser, info));
 
 		} else if (EdmComplexType.class.isAssignableFrom(type.getClass())) {
 			property = OProperties.complex(edmProp.getName(), (EdmComplexType) type, OEntityConverter
 					.getPropertiesList(getMetadata(), null, (EdmStructuralType) type, prop,
-							PropertyPath.getEmptyPropertyPath(),cfg,requestUser));
+							PropertyPath.getEmptyPropertyPath(), cfg, requestUser));
 		} else if (type.isSimple()) {
 			property = OProperties.simple(edmProp.getName(), (EdmSimpleType<?>) type, prop);
 		}
@@ -316,77 +321,81 @@ public class GenericProducer implements UserAwareODataProducer {
 			throw new NotFoundException();
 		}
 		RequestContext context = RequestContext.createRequestContext(ocontext, entityKey, queryInfo, type,
-						requestContext, securityManager, requestUser);
+				requestContext, securityManager, requestUser);
 		Object o = cfg.invoke(entitySetName, Action.GET, context, responseContext);
 		if (o == null) {
 			throw new BadRequestException("No entity found with this id.");
 		}
-		PropertyPath path=new PropertyPath(Arrays.asList(navPropPath));
-		String navProp=null;
-		PropertyDescriptor pd=null;
-		Object prop=null;
+		PropertyPath path = new PropertyPath(Arrays.asList(navPropPath));
+		String navProp = null;
+		PropertyDescriptor pd = null;
+		Object prop = null;
 		try {
-			String[] components=navPropPath.split("/");
-			//TODO: handle nested properties (and keys? for v3?)
-			for(String component : components) {
-				navProp=component;
-				if(!path.nextComponentContains(component)) {
-					throw new IllegalRequestException("Invalid component '"+component+"' in path: "+navPropPath);
+			String[] components = navPropPath.split("/");
+			// TODO: handle nested properties (and keys? for v3?)
+			for (String component : components) {
+				navProp = component;
+				if (!path.nextComponentContains(component)) {
+					throw new IllegalRequestException("Invalid component '" + component + "' in path: " + navPropPath);
 				}
-				path=path.getSubPath(component);
-				if (!canPerformPropertyAcion(ocontext, Action.GET, type,o, navProp)) {
+				path = path.getSubPath(component);
+				if (!canPerformPropertyAcion(ocontext, Action.GET, type, o, navProp)) {
 					throw new IllegalAccessException("User does not have permission to perform this action");
 				}
 				pd = new PropertyDescriptor(navProp, o.getClass());
 				prop = pd.getReadMethod().invoke(o);
-				if(prop==null && !path.isLeaf()) {
+				if (prop == null && !path.isLeaf()) {
 					throw new NotFoundException("A component on the path was not found");
 				}
-				if(!path.isLeaf()) {
-					if(Collection.class.isAssignableFrom(prop.getClass())) {
-						throw new IllegalRequestException("Collection property must be last component in path: "+component);
+				if (!path.isLeaf()) {
+					if (Collection.class.isAssignableFrom(prop.getClass())) {
+						throw new IllegalRequestException("Collection property must be last component in path: "
+								+ component);
 					}
-					if(!canPerformEntityAcion(ocontext, Action.GET, prop.getClass(), prop)) {
+					if (!canPerformEntityAcion(ocontext, Action.GET, prop.getClass(), prop)) {
 						throw new IllegalAccessException("A component on the path could not be accessed");
 					}
 				}
-				o=prop;
+				o = prop;
 			}
 			EdmDataServices data = getMetadata();
 			EdmPropertyBase edmProp = data.findEdmProperty(navProp);
-			if(prop==null) {
-				return Responses.property(OProperties.null_(edmProp.getName(), EdmSimpleType.STRING)); //its null do we care what type it is?
+			if (prop == null) {
+				return Responses.property(OProperties.null_(edmProp.getName(), EdmSimpleType.STRING)); // its null do we
+																										// care what
+																										// type it is?
 			}
 			if (!EdmNavigationProperty.class.isAssignableFrom(edmProp.getClass())) {
 
-				return getSimpleProp((EdmProperty) edmProp, prop,queryInfo);
+				return getSimpleProp((EdmProperty) edmProp, prop, queryInfo);
 			}
 			EdmNavigationProperty property = (EdmNavigationProperty) edmProp;
 			EdmEntityType edmType = property.getToRole().getType();
 			if (!Collection.class.isAssignableFrom(pd.getPropertyType())) {
-				if(!securityManager.canReadEntity(prop, requestUser,cfg)) {
+				if (securityManager != null && !securityManager.canReadEntity(prop, requestUser, cfg)) {
 					throw new IllegalAccessException("User does not have permission to perform this action");
 				}
-				return Responses.entity(OEntityConverter.createOEntity(getMetadata(), prop,pd.getPropertyType(), queryInfo,cfg,requestUser));
+				return Responses.entity(OEntityConverter.createOEntity(getMetadata(), prop, pd.getPropertyType(),
+						queryInfo, cfg, requestUser));
 			}
 			int size = 0;
 			List<OEntity> collection = new ArrayList<OEntity>();
 			for (Object item : (Iterable<?>) prop) {
-				if(!canPerformEntityAcion(ocontext, Action.GET, item.getClass(), item)) {
+				if (!canPerformEntityAcion(ocontext, Action.GET, item.getClass(), item)) {
 					continue;
 				}
-				collection.add(OEntityConverter.createOEntity(getMetadata(), item, queryInfo,cfg,requestUser));
+				collection.add(OEntityConverter.createOEntity(getMetadata(), item, queryInfo, cfg, requestUser));
 				size++;
 			}
 			return Responses.entities(collection, data.findEdmEntitySet(edmType.getName()), size, null);
-		} catch(IllegalAccessException e) {
+		} catch (IllegalAccessException e) {
 			throw e;
-		}catch(IllegalRequestException e) {
+		} catch (IllegalRequestException e) {
 			throw e;
-		}catch (IntrospectionException e) {
+		} catch (IntrospectionException e) {
 			throw new NotFoundException("Property not found: " + navProp);
 		} catch (Exception e) {
-			throw new IllegalRequestException("Path is not valid: "+navPropPath);
+			throw new IllegalRequestException("Path is not valid: " + navPropPath);
 		}
 	}
 
@@ -400,47 +409,50 @@ public class GenericProducer implements UserAwareODataProducer {
 	@Override
 	public void close() {
 	}
+
 	private Map<String, Object> getRelatedEntities(OEntity entity, EdmEntityType edmSet, ODataContext ocontext) {
-		Map<String, Object> relatedEntities=new HashMap<String,Object>();
-		//handle collections, handle inlined elements
-		for(OLink link : entity.getLinks()) {
-			String linkEntitySet=edmSet.findNavigationProperty(link.getRelation()).getToRole().getType().getName();
-			Class<?> linkType=cfg.getEntitySetClass(linkEntitySet);
-			if(link.isInline()) {
-				OEntity inlineEntity=link.getRelatedEntity();
-				Object relatedObject=OEntityConverter.oEntityToObject(inlineEntity, linkType);
+		Map<String, Object> relatedEntities = new HashMap<String, Object>();
+		// handle collections, handle inlined elements
+		for (OLink link : entity.getLinks()) {
+			String linkEntitySet = edmSet.findNavigationProperty(link.getRelation()).getToRole().getType().getName();
+			Class<?> linkType = cfg.getEntitySetClass(linkEntitySet);
+			if (link.isInline()) {
+				OEntity inlineEntity = link.getRelatedEntity();
+				Object relatedObject = OEntityConverter.oEntityToObject(inlineEntity, linkType);
 				relatedEntities.put(link.getRelation(), relatedObject);
 			} else {
-				OEntityKey key=OEntityConverter.getKeyFromHref(link.getHref());
+				OEntityKey key = OEntityConverter.getKeyFromHref(link.getHref());
 				RequestContext context = RequestContext.createRequestContext(ocontext, key, new QueryInfo(), linkType,
-								requestContext, securityManager, requestUser);
-				Object relatedObject=cfg.invoke(linkEntitySet, Action.GET, context, responseContext);
-				if(relatedObject==null) {
-					throw new NotFoundException("Object for property "+link.getRelation()+" does not exist: "+linkEntitySet+OEntityConverter.getKeyFromUrl(link.getHref()));
+						requestContext, securityManager, requestUser);
+				Object relatedObject = cfg.invoke(linkEntitySet, Action.GET, context, responseContext);
+				if (relatedObject == null) {
+					throw new NotFoundException("Object for property " + link.getRelation() + " does not exist: "
+							+ linkEntitySet + OEntityConverter.getKeyFromUrl(link.getHref()));
 				}
 				relatedEntities.put(link.getRelation(), relatedObject);
 			}
 		}
 		return relatedEntities;
 	}
+
 	@Override
 	public EntityResponse createEntity(ODataContext ocontext, String entitySetName, OEntity entity) {
 		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		EdmEntityType edmSet=getMetadata().findEdmEntitySet(entitySetName).getType();
+		EdmEntityType edmSet = getMetadata().findEdmEntitySet(entitySetName).getType();
 
 		if (type == null) {
 			throw new NotFoundException();
 		}
 
-		Map<String, Object> relatedEntities=getRelatedEntities(entity, edmSet, ocontext);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type,relatedEntities);
+		Map<String, Object> relatedEntities = getRelatedEntities(entity, edmSet, ocontext);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, type, relatedEntities);
 		if (!canPerformEntityAcion(ocontext, Action.CREATE, type, entityObject)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
 		RequestContext context = RequestContext.createRequestContext(ocontext, entityObject, type, requestContext,
 				securityManager, requestUser);
 		Object o = cfg.invoke(entitySetName, Action.CREATE, context, responseContext);
-		OEntity response = OEntityConverter.createOEntity(getMetadata(), o,cfg,requestUser);
+		OEntity response = OEntityConverter.createOEntity(getMetadata(), o, cfg, requestUser);
 		return Responses.entity(response);
 	}
 
@@ -448,34 +460,34 @@ public class GenericProducer implements UserAwareODataProducer {
 	public EntityResponse createEntity(ODataContext ocontext, String entitySetName, OEntityKey entityKey,
 			String navProp, OEntity entity) {
 		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		EdmEntityType edmSet=getMetadata().findEdmEntitySet(entitySetName).getType();
-		EdmEntityType linkEntityType=edmSet.findNavigationProperty(navProp).getToRole().getType();
-		Class<?> linkType=cfg.getEntitySetClass(linkEntityType.getName());
-		if (type == null || linkType==null) {
+		EdmEntityType edmSet = getMetadata().findEdmEntitySet(entitySetName).getType();
+		EdmEntityType linkEntityType = edmSet.findNavigationProperty(navProp).getToRole().getType();
+		Class<?> linkType = cfg.getEntitySetClass(linkEntityType.getName());
+		if (type == null || linkType == null) {
 			throw new NotFoundException();
 		}
-		//Get entity to update
+		// Get entity to update
 		RequestContext context = RequestContext.createRequestContext(ocontext, entityKey, new QueryInfo(), type,
-						requestContext, securityManager, requestUser);
+				requestContext, securityManager, requestUser);
 		Object entityToUpdate = cfg.invoke(entitySetName, Action.GET, context, responseContext);
 
-		//create linked entity
-		Map<String, Object> relatedEntities=getRelatedEntities(entity, linkEntityType, ocontext);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, linkType,relatedEntities);
+		// create linked entity
+		Map<String, Object> relatedEntities = getRelatedEntities(entity, linkEntityType, ocontext);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, linkType, relatedEntities);
 
-		if (!canPerformEntityAcion(ocontext, Action.CREATE, linkType, entityObject) ||
-			!canPerformEntityAcion(ocontext, Action.UPDATE, type, entityToUpdate)) {
+		if (!canPerformEntityAcion(ocontext, Action.CREATE, linkType, entityObject)
+				|| !canPerformEntityAcion(ocontext, Action.UPDATE, type, entityToUpdate)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
 		context = RequestContext.createRequestContext(ocontext, entityObject, linkType, requestContext,
-						securityManager, requestUser);
-		entityObject=cfg.invoke(linkEntityType.getName(), Action.CREATE, context, responseContext);
-		ReflectionUtil.invokeSetterOrAddToCollection(entityToUpdate, navProp,entityObject);
-		//update the entity
-		context = RequestContext.createRequestContext(ocontext, entityToUpdate, type, requestContext,
 				securityManager, requestUser);
+		entityObject = cfg.invoke(linkEntityType.getName(), Action.CREATE, context, responseContext);
+		ReflectionUtil.invokeSetterOrAddToCollection(entityToUpdate, navProp, entityObject);
+		// update the entity
+		context = RequestContext.createRequestContext(ocontext, entityToUpdate, type, requestContext, securityManager,
+				requestUser);
 		Object o = cfg.invoke(entitySetName, Action.UPDATE, context, responseContext);
-		OEntity response = OEntityConverter.createOEntity(getMetadata(), o,cfg,requestUser);
+		OEntity response = OEntityConverter.createOEntity(getMetadata(), o, cfg, requestUser);
 		return Responses.entity(response);
 	}
 
@@ -494,38 +506,40 @@ public class GenericProducer implements UserAwareODataProducer {
 		return;
 
 	}
-	private void updateEntity(ODataContext ocontext, String entitySetName, OEntity entity,boolean isMerge) {
-		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		Map<String, Object> relatedEntities=getRelatedEntities(entity, entity.getEntityType(), ocontext);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type,relatedEntities);
 
-		if (!canPerformEntityAcion(ocontext, (isMerge?Action.PATCH:Action.UPDATE), type, entityObject)) {
+	private void updateEntity(ODataContext ocontext, String entitySetName, OEntity entity, boolean isMerge) {
+		Class<?> type = cfg.getEntitySetClass(entitySetName);
+		Map<String, Object> relatedEntities = getRelatedEntities(entity, entity.getEntityType(), ocontext);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, type, relatedEntities);
+
+		if (!canPerformEntityAcion(ocontext, (isMerge ? Action.PATCH : Action.UPDATE), type, entityObject)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
 		}
-		RequestContext context = RequestContext.createRequestContext(ocontext,entity.getEntityKey(), entityObject, type, requestContext,
-						securityManager, requestUser);
-		Object target=cfg.invoke(entitySetName, Action.GET, context, responseContext);
-		ObjectMerger mergeMethod=new ObjectMerger();
-		if(isMerge) {
+		RequestContext context = RequestContext.createRequestContext(ocontext, entity.getEntityKey(), entityObject,
+				type, requestContext, securityManager, requestUser);
+		Object target = cfg.invoke(entitySetName, Action.GET, context, responseContext);
+		ObjectMerger mergeMethod = new ObjectMerger();
+		if (isMerge) {
 			mergeMethod.mergeObjects(entityObject, target);
 		} else {
 			mergeMethod.updateObjects(entityObject, target);
 		}
-		//mergeMethod.setKeyProperties(KeyMap.fromOEntityKey(entity.getEntityKey()), target);
-		context = RequestContext.createRequestContext(ocontext,entity.getEntityKey(), target, type, requestContext,
-						securityManager, requestUser);
+		// mergeMethod.setKeyProperties(KeyMap.fromOEntityKey(entity.getEntityKey()), target);
+		context = RequestContext.createRequestContext(ocontext, entity.getEntityKey(), target, type, requestContext,
+				securityManager, requestUser);
 		cfg.invoke(entitySetName, Action.UPDATE, context, responseContext);
 	}
+
 	@Override
 	public void mergeEntity(ODataContext ocontext, String entitySetName, OEntity entity) {
-		updateEntity(ocontext, entitySetName, entity,true);
+		updateEntity(ocontext, entitySetName, entity, true);
 		return;
 
 	}
 
 	@Override
 	public void updateEntity(ODataContext ocontext, String entitySetName, OEntity entity) {
-		updateEntity(ocontext, entitySetName, entity,false);
+		updateEntity(ocontext, entitySetName, entity, false);
 		return;
 
 	}
@@ -575,7 +589,10 @@ public class GenericProducer implements UserAwareODataProducer {
 			Map<String, OFunctionParameter> params, QueryInfo queryInfo) {
 		FunctionName functionName = new FunctionName(name.getName(), name.getHttpMethod());
 		FunctionInfo functionInfo = cfg.getFunctionInfo(functionName);
-		FunctionSecurityManager security = securityManager.getSecurityManagerForFunction(functionName);
+		FunctionSecurityManager security = null;
+		if (securityManager != null) {
+			security = securityManager.getSecurityManagerForFunction(functionName);
+		}
 		Map<String, EdmFunctionParameter> paramsIndex = indexParameters(name.getParameters());
 		if (security != null && security.canCallFunction(requestUser)) {
 			throw new IllegalAccessException("User does not have permission to call this function");
@@ -610,35 +627,35 @@ public class GenericProducer implements UserAwareODataProducer {
 				parameters.put(key, security.getFunctionArgument(parameters.get(key), requestUser));
 			}
 		}
-		Object ret = cfg.invoke(functionName, parameters, request, responseContext,cfg);
+		Object ret = cfg.invoke(functionName, parameters, request, responseContext, cfg);
 		if (security != null) {
 			// use security manager to translate returned value into allowed return object
 			ret = security.getReturnValue(ret, requestUser);
 		}
-		//TODO: handle null?
+		// TODO: handle null?
 		if (name.getReturnType().isSimple()) {
-			return Responses.simple((EdmSimpleType<?>) name.getReturnType(),"result", ret);
+			return Responses.simple((EdmSimpleType<?>) name.getReturnType(), "result", ret);
 		} else if (name.getReturnType() instanceof EdmCollectionType) {
 			OCollection<?> items = OEntityConverter.getCollection(getMetadata(),
-					((EdmCollectionType) name.getReturnType()), ret,cfg,requestUser,queryInfo);
+					((EdmCollectionType) name.getReturnType()), ret, cfg, requestUser, queryInfo);
 			EdmType type = ((EdmCollectionType) name.getReturnType()).getItemType();
 			if (type instanceof EdmEntityType) {
 				EdmEntitySet set = getMetadata().findEdmEntitySet(((EdmEntityType) type).getName());
-				String skipToken=null;
-				if(functionInfo.includeSkipToken()) {
-					skipToken=generateSkipToken(items.size(), queryInfo);
+				String skipToken = null;
+				if (functionInfo.includeSkipToken()) {
+					skipToken = generateSkipToken(items.size(), queryInfo);
 				}
 				return Responses.collection(items, set, null, skipToken, ((EdmEntityType) type).getName());
 			}
 			return Responses.collection(items);
 		} else if (name.getReturnType() instanceof EdmComplexType) {
 			return Responses.complexObject(OEntityConverter.createComplexObject(getMetadata(), ret,
-					(EdmComplexType) name.getReturnType(), queryInfo,cfg,requestUser), "result");
+					(EdmComplexType) name.getReturnType(), queryInfo, cfg, requestUser), "result");
 		}
 		// if (name.getReturnType() != o.getClass()) {
 		// throw new UnexpectedException("");
 		// }
-		return Responses.entity(OEntityConverter.createOEntity(getMetadata(), ret, queryInfo,cfg,requestUser));
+		return Responses.entity(OEntityConverter.createOEntity(getMetadata(), ret, queryInfo, cfg, requestUser));
 	}
 
 	@Override
@@ -648,28 +665,25 @@ public class GenericProducer implements UserAwareODataProducer {
 
 	@Override
 	public User resolveUser(HttpServletRequest request) {
-		if(this.requestContext==null) {
-			this.requestContext=request;
+		if (this.requestContext == null) {
+			this.requestContext = request;
 		}
-		if(this.requestUser==null && resolver!=null && this.requestContext!=null) {
+		if (this.requestUser == null && resolver != null && this.requestContext != null) {
 			try {
-				this.requestUser=resolver.getUser(this.requestContext, null);
+				this.requestUser = resolver.getUser(this.requestContext, null);
 			} catch (NoLoginException e) {
-				this.requestUser=null;
+				this.requestUser = null;
 			}
 		}
 		return this.requestUser;
 	}
 
-
 	public ProducerExtensionResolver getExtensionResolver() {
 		return extensionResolver;
 	}
 
-
 	public void setExtensionResolver(ProducerExtensionResolver extensionResolver) {
 		this.extensionResolver = extensionResolver;
 	}
-
 
 }

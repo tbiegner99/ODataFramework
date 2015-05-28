@@ -45,13 +45,6 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		this.factory = factory;
 	}
 
-<<<<<<< HEAD
-	public void setFactory(SessionFactory factory) {
-		this.factory = factory;
-	}
-
-=======
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 	@Override
 	public void finalize() throws Throwable {
 		try {
@@ -62,23 +55,13 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	}
 
 	private Session getSession() {
-<<<<<<< HEAD
 		// TODO: Implement scoped (thread specific) sessions with transactions
 		try {
 			session = factory.getCurrentSession();
 		} catch (Exception e) {
 			// TODO: log;
 		}
-		if (session == null || !session.isOpen()) {
-=======
-		//TODO: Implement scoped (thread specific) sessions with transactions
-		try{
-			session=factory.getCurrentSession();
-		}catch(Exception e) {
-			//TODO: log;
-		}
-		if (session == null){// || !session.isOpen()) {
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
+		if (session == null) {// || !session.isOpen()) {
 			session = factory.openSession();
 		}
 		return session;
@@ -90,13 +73,14 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		}
 		session = factory.openSession();
 	}
-<<<<<<< HEAD
 
 	private void cascadeSave(Object entity, Set<Object> savedObjects) {
 		if (entity == null || savedObjects.contains(entity)) {
 			return;
 		}
-
+		if (getSession().contains(entity)) {
+			return;
+		}
 		savedObjects.add(entity);
 		ClassMetadata meta = factory.getClassMetadata(entity.getClass());
 		if (meta == null) {
@@ -104,46 +88,25 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		}
 		for (String property : meta.getPropertyNames()) {
 			Object value = meta.getPropertyValue(entity, property);
-			if (value == null || savedObjects.contains(value)) {
+			if (value == null) {
 				continue;
 			}
 			Type t = meta.getPropertyType(property);
+
 			if (t.isEntityType()) {
-				// getSession().merge(value);
 				cascadeSave(value, savedObjects);
 			} else if (t.isCollectionType()) {
 				for (Object o : (Iterable<?>) value) {
 					cascadeSave(o, savedObjects);
-=======
-	private void cascadeSave(Object entity,Set<Object> savedObjects) {
-		if(entity==null || savedObjects.contains(entity)) {return;}
-		if(getSession().contains(entity)) {return;}
-		savedObjects.add(entity);
-		ClassMetadata meta=factory.getClassMetadata(entity.getClass());
-		if(meta==null) {
-			return;
-		}
-		for (String property : meta.getPropertyNames()) {
-			Object value=meta.getPropertyValue(entity, property);
-			if(value==null){continue;}
-			Type t=meta.getPropertyType(property);
-			if(t.isEntityType()) {
-				cascadeSave(value, savedObjects);
-			} else if(t.isCollectionType()) {
-				for(Object o : (Iterable<?>) value) {
-					cascadeSave(o,savedObjects);
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 				}
 			}
 		}
 		getSession().saveOrUpdate(entity);
 	}
-<<<<<<< HEAD
 
 	@Override
 	public T createEntity(T entity, SecurityManager<T, ?> manager, User user) {
 		try {
-			// getSession().merge(entity);
 			cascadeSave(entity, new HashSet<Object>());
 			// should not have to
 			getSession().flush();
@@ -151,17 +114,6 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		} catch (ConstraintViolationException | org.hibernate.NonUniqueObjectException e) {
 			throw new DataConflictException(
 					"A data contraint would be violated with ths action. The action was not completed successfully.", e);
-=======
-	@Override
-	public T createEntity(T entity, SecurityManager<T, ?> manager, User user) {
-		try {
-			cascadeSave(entity,new HashSet<Object>());
-			//should not have to
-			getSession().flush();
-			getSession().refresh(entity);
-		} catch(ConstraintViolationException | org.hibernate.NonUniqueObjectException e) {
-			throw new DataConflictException("A data contraint would be violated with ths action. The action was not completed successfully.",e);
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 		} catch (RuntimeException e) {
 			getSession().clear();
 			throw e;
@@ -190,14 +142,9 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		try {
 			getSession().delete(object);
 			getSession().flush();
-<<<<<<< HEAD
 		} catch (ConstraintViolationException e) {
 			throw new DataConflictException(
 					"A data contraint would be violated with ths action. The action was not completed successfully.");
-=======
-		} catch(ConstraintViolationException e) {
-			throw new DataConflictException("A data contraint would be violated with ths action. The action was not completed successfully.");
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 		} catch (RuntimeException e) {
 			throw e;
 		}
@@ -222,24 +169,17 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	@Override
 	public T updateEntity(T entity, KeyMap keys, SecurityManager<T, ?> manager, User user) {
 		try {
-<<<<<<< HEAD
 			if (getSession().contains(entity)) {
-=======
-			if(getSession().contains(entity) ) {
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 				cascadeSave(entity, new HashSet<>());
 				getSession().flush();
 				return entity;
 			}
 			throw new IllegalRequestException("The entity does not exist. Create the entity first.");
-<<<<<<< HEAD
 		} catch (ConstraintViolationException e) {
 			throw new DataConflictException(
-					"A data contraint would be violated with ths action. The action was not completed successfully.", e);
-=======
-		} catch(ConstraintViolationException e) {
-			throw new DataConflictException("A data contraint would be violated with ths action. The action was not completed successfully.");
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
+					"A data contraint would be violated with ths action. The action was not completed successfully.");
+		} catch (RuntimeException e) {
+			throw e;
 		}
 
 	}
@@ -286,36 +226,21 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	@Override
 	public Collection<T> getEntities(QueryInfo info, SecurityManager<T, ?> manager, User user) {
 		int top = DEFAULT_TOP, skip = DEFAULT_SKIP;
-<<<<<<< HEAD
 		int skipToken = 0;
 		if (info.skipToken != null) {
 			try {
 				skipToken = Integer.parseInt(info.skipToken);
 			} catch (NumberFormatException e) {
 				throw new BadRequestException("Invalid skip token: " + info.skipToken + "- Must be an integer.");
-=======
-		int skipToken=0;
-		if(info.skipToken!=null) {
-			try{
-				skipToken=Integer.parseInt(info.skipToken);
-			} catch(NumberFormatException e) {
-				throw new BadRequestException("Invalid skip token: "+info.skipToken+"- Must be an integer.");
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 			}
 		}
 		if (info.top != null && info.top > 0) {
 			top = info.top;
 		}
 		if (info.skip != null && info.skip > 0) {
-<<<<<<< HEAD
 			skip = info.skip + skipToken;
 		} else if (skipToken > 0) {
 			skip = skipToken;
-=======
-			skip = info.skip+skipToken;
-		} else if(skipToken>0){
-			skip=skipToken;
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 		}
 		HibernateQuery<T> q = new HibernateQuery<T>(QueryType.RETRIEVE, type, top, skip,
 				(SecurityManager<T, User>) manager, user);
@@ -413,5 +338,10 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	@Override
 	public long countEntities(QueryInfo filters) {
 		return countEntities(filters, null, null);
+	}
+
+	public void setFactory(SessionFactory factory) {
+		this.factory = factory;
+
 	}
 }

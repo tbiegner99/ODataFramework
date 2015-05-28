@@ -124,12 +124,21 @@
 	<groupId>org.reflections</groupId>
 	<artifactId>reflections</artifactId>
 	<version>0.9.8</version>
+	<exclusions>
+		<exclusion>
+			<artifactId>javassist</artifactId>
+			<groupId>javassist</groupId>
+		</exclusion>
+	</exclusions>
 </dependency>
-
+<dependency>
+    <groupId>org.javassist</groupId>
+    <artifactId>javassist</artifactId>
+    <version>3.18.1-GA</version> 
+</dependency>
   	<dependency>
   		<groupId>com.tj</groupId>
   		<artifactId>ODataFramework-annotations</artifactId>
-  		<version>0.0.2-SNAPSHOT</version>
   	</dependency>
   </dependencies>
  

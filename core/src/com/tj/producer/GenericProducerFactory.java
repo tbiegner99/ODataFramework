@@ -22,17 +22,16 @@ import com.tj.security.user.UserResolver;
 public class GenericProducerFactory implements ODataProducerFactory {
 	private ProducerConfiguration config;
 	private UserResolver<?> userResolver;
-	private CompositeSecurityManager securityManager;
 	private EdmDataServices metadata;
 	private ODataProxyFactory proxy;
 	private ProducerExtensionResolver extensionResolver;
+
 	public GenericProducerFactory() {
 	}
 
 	public GenericProducerFactory(ProducerConfiguration cfg, UserResolver<?> resolver) {
 		config = cfg;
 		userResolver = resolver;
-		securityManager = config.getSecurityManager();
 	}
 
 	public GenericProducerFactory(ProducerConfiguration cfg) {
@@ -41,8 +40,8 @@ public class GenericProducerFactory implements ODataProducerFactory {
 
 	@Override
 	public ODataProducer create(Properties properties) {
-		GenericProducer p = new GenericProducer(config,metadata);
-		if(proxy!=null) {
+		GenericProducer p = new GenericProducer(config, metadata);
+		if (proxy != null) {
 			return createProducerProxy(p);
 		}
 		return p;
@@ -50,16 +49,20 @@ public class GenericProducerFactory implements ODataProducerFactory {
 
 	public ODataProducer createForRequest(HttpServletRequest request, ResponseContext response,
 			SecurityContext security, Properties properties) {
-		UserAwareODataProducer producer=create(request, response, securityManager, userResolver, config,metadata);
+		UserAwareODataProducer producer = create(request, response, config.getSecurityManager(), userResolver, config,
+				metadata);
 		producer.resolveUser(request);
 		return producer;
 	}
 
-	public UserAwareODataProducer create(HttpServletRequest request, ResponseContext response, CompositeSecurityManager securityManager2, UserResolver<?> user, ProducerConfiguration config2, EdmDataServices metadata2) {
-		UserAwareODataProducer producer = new GenericProducer(request, response, securityManager, user, config,metadata);
-		((GenericProducer)producer).setExtensionResolver(extensionResolver);
-		if(proxy!=null) {
-			producer=createProducerProxy((GenericProducer) producer);
+	public UserAwareODataProducer create(HttpServletRequest request, ResponseContext response,
+			CompositeSecurityManager securityManager2, UserResolver<?> user, ProducerConfiguration config2,
+			EdmDataServices metadata2) {
+		UserAwareODataProducer producer = new GenericProducer(request, response, config.getSecurityManager(), user,
+				config, metadata);
+		((GenericProducer) producer).setExtensionResolver(extensionResolver);
+		if (proxy != null) {
+			producer = createProducerProxy((GenericProducer) producer);
 		}
 		producer.resolveUser(request);
 		return producer;
@@ -67,37 +70,34 @@ public class GenericProducerFactory implements ODataProducerFactory {
 
 	private UserAwareODataProducer createProducerProxy(GenericProducer producer) {
 		producer.setExtensionResolver(extensionResolver);
-		List<Class<?>> interfaces=new ArrayList<>(Arrays.asList(producer.getClass().getInterfaces()));
-		if(!interfaces.contains(UserAwareODataProducer.class)) {
+		List<Class<?>> interfaces = new ArrayList<>(Arrays.asList(producer.getClass().getInterfaces()));
+		if (!interfaces.contains(UserAwareODataProducer.class)) {
 			interfaces.add(0, UserAwareODataProducer.class);
 		}
-		Class<?>[] interfaceArray=interfaces.toArray(new Class<?>[interfaces.size()]);
-		return (UserAwareODataProducer) Proxy.newProxyInstance(
-						GenericProducer.class.getClassLoader(),
-						interfaceArray,
-						proxy.getServiceProxy(producer)
-						);
+		Class<?>[] interfaceArray = interfaces.toArray(new Class<?>[interfaces.size()]);
+		return (UserAwareODataProducer) Proxy.newProxyInstance(GenericProducer.class.getClassLoader(), interfaceArray,
+				proxy.getServiceProxy(producer));
 	}
 
-	@Autowired(required=false)
+	@Autowired(required = false)
 	public void setConfig(ProducerConfiguration config) {
 		this.config = config;
-		metadata=config.getMetadata();
-		securityManager=config.getSecurityManager();
+		metadata = config.getMetadata();
 	}
 
-	@Autowired(required=false)
+	@Autowired(required = false)
 	public void setUserResolver(UserResolver<?> userResolver) {
 		this.userResolver = userResolver;
 	}
 
-	@Autowired(required=false)
+	@Autowired(required = false)
 	public void setProxy(ODataProxyFactory proxy) {
-		this.proxy=proxy;
+		this.proxy = proxy;
 	}
-	@Autowired(required=false)
+
+	@Autowired(required = false)
 	public void setExtensionResolver(ProducerExtensionResolver extensionResolver) {
-		this.extensionResolver=extensionResolver;
+		this.extensionResolver = extensionResolver;
 	}
 
 }

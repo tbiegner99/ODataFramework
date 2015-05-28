@@ -14,11 +14,7 @@ public class HibernateQuery<T> extends Query<T> {
 	}
 
 	public HibernateQuery(QueryType type, Class<T> entity, SecurityManager<T, User> manager, User user) {
-<<<<<<< HEAD
-		super(type, entity, -1, -1, manager, user);
-=======
 		super(type, entity,-1,-1,manager,user);
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 		setWhere(new HibernateWhereClause(this));
 	}
 
@@ -53,11 +49,7 @@ public class HibernateQuery<T> extends Query<T> {
 				ret = "UPDATE c ";
 				break;
 		}
-<<<<<<< HEAD
-		ret += "from " + getEntityType().getName() + " c ";
-=======
 		ret += "from " + getEntityType().getSimpleName() + " c ";
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 		if (getWhere() != null) {
 			ret += getWhere().asString() + " ";
 		}
@@ -76,11 +68,7 @@ public class HibernateQuery<T> extends Query<T> {
 			ret = ret.setFirstResult(getSkip());
 		}
 		for (Parameter p : getParameters()) {
-<<<<<<< HEAD
-			ret.setParameter(p.getName(), p.getValue());
-=======
 				ret.setParameter(p.getName(), p.getValue());
->>>>>>> 6ae090a3b6cd5556c0994757c683e9054c98ac23
 		}
 		return ret;
 	}
