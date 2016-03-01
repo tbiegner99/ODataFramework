@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 
@@ -14,8 +16,12 @@ import com.tj.producer.annotations.entity.IgnoreType;
 import com.tj.producer.util.ReflectionUtil;
 
 public abstract class AbstractPackageScanService extends AbstractCompositeService {
+
+	private static Logger log = LoggerFactory.getLogger(AbstractPackageScanService.class);
+
 	private Set<Object> createdServices = new HashSet<Object>();
 	private AutowireCapableBeanFactory beanFactory;
+
 	public AbstractPackageScanService(String packageName, Class<? extends Annotation> marker) {
 		init(Arrays.asList(packageName), marker);
 	}
@@ -49,7 +55,7 @@ public abstract class AbstractPackageScanService extends AbstractCompositeServic
 			}
 			try {
 				Service<?> s = (Service<?>) service.newInstance();
-				if(beanFactory!=null) {
+				if (beanFactory != null) {
 					this.beanFactory.autowireBean(s);
 				}
 				Collection<Class<?>> serviceClasses = AbstractCompositeService.getServiceTypesForClass(service);

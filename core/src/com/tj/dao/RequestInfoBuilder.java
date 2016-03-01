@@ -4,6 +4,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/***
+ * Builds info that can be used for an odata request. tHIs
+ * is useful for in app calls to sevices where the request is normalized to
+ * an odata request.
+ * 
+ * @author TJ Biegner
+ *
+ */
 public class RequestInfoBuilder {
 	private RequestInfo requestInfo;
 

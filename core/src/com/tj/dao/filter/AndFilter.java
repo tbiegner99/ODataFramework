@@ -2,6 +2,12 @@ package com.tj.dao.filter;
 
 import org.odata4j.expression.AndExpression;
 
+/***
+ * Filter representing logical and of 2 filter expressions
+ * 
+ * @author Admin
+ *
+ */
 public class AndFilter extends CompositeFilter {
 
 	public AndFilter(Filter f1, Filter f2) {

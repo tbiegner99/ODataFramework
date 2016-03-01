@@ -44,6 +44,14 @@
     			<artifactId>ODataFramework-annotations</artifactId>
     			<version>${project.version}</version>
     		</dependency>
+    		<dependency>
+    			<groupId>com.tj</groupId>
+    			<artifactId>ODataFramework-core</artifactId>
+    			<version>${project.version}</version>
+    		</dependency>
     	</dependencies>
     </dependencyManagement>
+    <properties>
+    	<global.version>0.0.2-SNAPSHOT</global.version>
+    </properties>
 </project>

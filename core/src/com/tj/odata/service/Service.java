@@ -8,12 +8,19 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tj.producer.KeyMap;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
+import com.tj.producer.configuration.ServiceProducerConfiguration;
+
 @Transactional
 public interface Service<T> {
 
+	public ServiceProducerConfiguration getConfiguration();
+
+	public void setConfiguration(ServiceProducerConfiguration configuration);
+
 	public Class<? extends T> getServiceType();
 
-	public T linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey,String property,Object newLink);
+	public T linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey,
+			String property, Object newLink);
 
 	public T createEntity(Class<?> type, RequestContext request, ResponseContext response, T object);
 
@@ -30,7 +37,6 @@ public interface Service<T> {
 
 	public Long getEntitiesCount(Class<?> type, RequestContext request, ResponseContext response, KeyMap keys,
 			QueryInfo info);
-
 
 	// count
 	// public Integer getEntitiesCount(RequestContext request, ResponseContext

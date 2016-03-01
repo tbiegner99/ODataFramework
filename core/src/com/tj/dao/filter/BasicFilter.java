@@ -25,6 +25,14 @@ import org.odata4j.expression.NullLiteral;
 import org.odata4j.expression.OrExpression;
 import org.odata4j.producer.resources.OptionsQueryParser;
 
+/***
+ * An object representation of a boolean expression from odata4j
+ * This obkect is a normalized representation of an expression
+ * that can be used for generation of sql queries.
+ * 
+ * @author Admin
+ *
+ */
 public class BasicFilter implements Filter {
 	private Expression lhs;
 	private Expression rhs;
@@ -105,31 +113,33 @@ public class BasicFilter implements Filter {
 				return new BasicFilter(lhs, Comparison.NOT_EQUALS, rhs);
 			}
 		}
-		// TODO: ANY,ALL, functions
 		throw new NotImplementedException("Not Impolemented: " + e.getClass().getName());
 	}
 
 	public static Filter joinFilters(Collection<Filter> filters) {
-		if(filters==null || filters.isEmpty()) {return null;}
-		Iterator<Filter> it=filters.iterator();
-		Filter ret=it.next();
-		while(it.hasNext()) {
-			ret=new AndFilter(ret,it.next());
+		if (filters == null || filters.isEmpty()) {
+			return null;
+		}
+		Iterator<Filter> it = filters.iterator();
+		Filter ret = it.next();
+		while (it.hasNext()) {
+			ret = new AndFilter(ret, it.next());
 		}
 		return ret;
 	}
+
 	public static Filter fromExpression(String filterExp) {
-		BoolCommonExpression exp=OptionsQueryParser.parseFilter(filterExp);
+		BoolCommonExpression exp = OptionsQueryParser.parseFilter(filterExp);
 		return BasicFilter.fromExpression(exp);
 	}
 
 	public static BoolCommonExpression toExpression(List<String> filters) {
-		if(filters==null || filters.isEmpty()) {
+		if (filters == null || filters.isEmpty()) {
 			return org.odata4j.expression.Expression.boolean_(true);
 		}
-		BoolCommonExpression exp=OptionsQueryParser.parseFilter(filters.get(0));
-		for(int i=1;i<filters.size();i++) {
-			exp=org.odata4j.expression.Expression.and(exp, OptionsQueryParser.parseFilter(filters.get(i)));
+		BoolCommonExpression exp = OptionsQueryParser.parseFilter(filters.get(0));
+		for (int i = 1; i < filters.size(); i++) {
+			exp = org.odata4j.expression.Expression.and(exp, OptionsQueryParser.parseFilter(filters.get(i)));
 		}
 		return exp;
 	}

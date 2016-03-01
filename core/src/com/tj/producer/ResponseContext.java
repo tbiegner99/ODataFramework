@@ -11,14 +11,18 @@ public interface ResponseContext {
 	public void setHeader(String name, String value);
 
 	public void addCookie(String name, String value);
+
 	/**
 	 * A placeholder response context. does nothing
+	 * 
 	 * @author tbiegner
 	 *
 	 */
 	public static class DefaultResponseContext implements ResponseContext {
 
-		public DefaultResponseContext(){}
+		public DefaultResponseContext() {
+		}
+
 		@Override
 		public void setDateHeader(String name, Date value) {
 		}

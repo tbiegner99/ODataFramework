@@ -15,14 +15,14 @@ public class FunctionRouter<T extends Function> implements FunctionService {
 		this.factory = factory;
 	}
 
-	public FunctionRouter(Collection<T> functions) {
+	public FunctionRouter(Collection<? extends T> functions) {
 		this(new DefaultFunctionFactory<T>(functions));
 	}
 
 	@Override
 	public Object invoke(FunctionName name, Map<String, Object> parameters, RequestContext request,
-			ResponseContext response,ProducerConfiguration config) {
-		return factory.getFunction(name).invoke(name, parameters, request, response,config);
+			ResponseContext response, ProducerConfiguration config) {
+		return factory.getFunction(name).invoke(name, parameters, request, response, config);
 	}
 
 	@Override

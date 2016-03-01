@@ -35,7 +35,7 @@ public class KeyMap implements Serializable {
 	}
 
 	public Object getSingleKey() {
-		if(keys.isEmpty()) {
+		if (keys.isEmpty()) {
 			throw new IllegalArgumentException("No key available");
 		}
 		return this.keys.values().iterator().next();
@@ -46,11 +46,11 @@ public class KeyMap implements Serializable {
 	}
 
 	public <T> T setValuesToEntity(T entityTarget) {
-		if(isSingleKey()) {
-			String propName=getSingleKeyPropertyName(entityTarget);
+		if (isSingleKey()) {
+			String propName = getSingleKeyPropertyName(entityTarget);
 			ReflectionUtil.setField(entityTarget, propName, getKey(SINGLE_KEY));
 		} else {
-			for(String s : getComplexProperties()) {
+			for (String s : getComplexProperties()) {
 				ReflectionUtil.setField(entityTarget, s, getKey(s));
 			}
 		}
@@ -58,7 +58,7 @@ public class KeyMap implements Serializable {
 	}
 
 	public static String getSingleKeyPropertyName(Object entity) {
-		for(Field f : entity.getClass().getDeclaredFields()) {
+		for (Field f : entity.getClass().getDeclaredFields()) {
 			if (f.isAnnotationPresent(Key.class) || f.isAnnotationPresent(Id.class)) {
 				return f.getName();
 			}
@@ -67,7 +67,7 @@ public class KeyMap implements Serializable {
 	}
 
 	public static String getSingleKeyPropertyName(Class<?> entity) {
-		for(Field f : entity.getDeclaredFields()) {
+		for (Field f : entity.getDeclaredFields()) {
 			if (f.isAnnotationPresent(Key.class) || f.isAnnotationPresent(Id.class)) {
 				return f.getName();
 			}
@@ -87,23 +87,31 @@ public class KeyMap implements Serializable {
 		}
 		return ret;
 	}
+
 	public static KeyMap createFromSingleKey(Class<?> type, Object key) {
-		KeyMap ret=new KeyMap();
+		KeyMap ret = new KeyMap();
 		ret.keys.put(getSingleKeyPropertyName(type), key);
 		return ret;
 	}
 
 	public static KeyMap build(Object entity, Class<?> type) {
 		KeyMap ret = new KeyMap();
-		buildKeys(entity, type);
+		buildFromEntity(entity, type, ret);
 		return ret;
 	}
 
-	private static void buildKeys(Object entity, Class<?> type) {
+	private static void buildFromEntity(Object entity, Class<?> type, KeyMap ret) {
 		for (Field f : type.getDeclaredFields()) {
 			if (f.isAnnotationPresent(Key.class) || f.isAnnotationPresent(Id.class)) {
+				Object value = ReflectionUtil.getField(entity, f);
 				if (!ReflectionUtil.isPrimitiveOrWrapper(f.getType())) {
-
+					ret.keys.put(f.getName(), value);
+				} else {
+					for (Field embedded : f.getType().getDeclaredFields()) {
+						if (!ReflectionUtil.isPrimitiveOrWrapper(f.getType())) {
+							ret.keys.put(embedded.getName(), ReflectionUtil.getField(value, embedded));
+						}
+					}
 				}
 			}
 		}

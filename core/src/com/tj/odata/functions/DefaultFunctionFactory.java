@@ -5,8 +5,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.tj.odata.functions.FunctionInfo.FunctionName;
+
 /***
  * A default implementation of a function
+ * 
  * @author tbiegner
  *
  * @param <T>
@@ -14,7 +16,7 @@ import com.tj.odata.functions.FunctionInfo.FunctionName;
 public class DefaultFunctionFactory<T extends Function> implements FunctionFactory<T> {
 	private Map<FunctionName, T> functions;
 
-	public DefaultFunctionFactory(Collection<T> functions) {
+	public DefaultFunctionFactory(Collection<? extends T> functions) {
 		this();
 		for (T func : functions) {
 			this.functions.put(func.getAliases().getName(), func);

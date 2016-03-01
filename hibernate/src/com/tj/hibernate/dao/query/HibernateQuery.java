@@ -14,7 +14,7 @@ public class HibernateQuery<T> extends Query<T> {
 	}
 
 	public HibernateQuery(QueryType type, Class<T> entity, SecurityManager<T, User> manager, User user) {
-		super(type, entity,-1,-1,manager,user);
+		super(type, entity, -1, -1, manager, user);
 		setWhere(new HibernateWhereClause(this));
 	}
 
@@ -68,7 +68,7 @@ public class HibernateQuery<T> extends Query<T> {
 			ret = ret.setFirstResult(getSkip());
 		}
 		for (Parameter p : getParameters()) {
-				ret.setParameter(p.getName(), p.getValue());
+			ret.setParameter(p.getName(), p.getValue());
 		}
 		return ret;
 	}

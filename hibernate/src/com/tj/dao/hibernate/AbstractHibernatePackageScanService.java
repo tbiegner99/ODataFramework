@@ -1,10 +1,20 @@
 package com.tj.dao.hibernate;
 
+import java.lang.reflect.Proxy;
+
 import org.hibernate.SessionFactory;
 
+import com.tj.hibernate.proxy.TransactionProxyFactory;
 import com.tj.odata.proxy.ProxyService;
 import com.tj.odata.service.AbstractPackageScanService;
+import com.tj.odata.service.Service;
 
+/**
+ * Base class for hibernate services using package scan functionality. This supplies a getSessionFactory to its children
+ * so that they can query. It also creates a proxy so that transactions can be managed.
+ * 
+ * @author Admin
+ */
 public abstract class AbstractHibernatePackageScanService extends AbstractPackageScanService {
 	private SessionFactory factory;
 
@@ -12,17 +22,10 @@ public abstract class AbstractHibernatePackageScanService extends AbstractPackag
 		factory = fact;
 	}
 
-	// DONT overide getProxy for transaction management. That could result in nested transactions.
 	@Override
 	public ProxyService<?> getProxy() {
-		return super.getProxy();
-		/*
-		 * List<Class<?>> interfaces=new ArrayList<>(Arrays.asList(this.getClass().getInterfaces())); interfaces.add(0,
-		 * Service.class); Class<?>[] interfaceArray=interfaces.toArray(new Class<?>[interfaces.size()]); return
-		 * (com.tj.odata.service.Service<?>) Proxy.newProxyInstance(
-		 * com.tj.odata.service.Service.class.getClassLoader(), interfaceArray, new
-		 * TransactionProxyFactory(factory).getServiceProxy(this) );
-		 */
+		return (ProxyService<?>) Proxy.newProxyInstance(Service.class.getClassLoader(),
+				new Class[] { ProxyService.class }, new TransactionProxyFactory(factory).getServiceProxy(this));
 	}
 
 	protected SessionFactory getSessionFactory() {

@@ -6,6 +6,7 @@ import java.util.Collection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 
+import com.tj.producer.annotations.entity.IgnoreType;
 import com.tj.producer.util.ReflectionUtil;
 
 public class PackageScannerFunctionFactory extends DefaultFunctionFactory<Function> {
@@ -34,6 +35,9 @@ public class PackageScannerFunctionFactory extends DefaultFunctionFactory<Functi
 	protected void init(Collection<String> packages, Collection<Class<?>> ignore) {
 		for (Class<?> function : ReflectionUtil.getSubTypesInPackages(packages, Function.class, ignore)) {
 			try {
+				if (function.isAnnotationPresent(IgnoreType.class)) {
+					continue;
+				}
 				Function instance = (Function) function.newInstance();
 				if (beanFactory != null) {
 					beanFactory.autowireBean(instance);

@@ -27,6 +27,8 @@ public interface ProducerConfiguration extends FunctionService {
 
 	public boolean isMediaEntity(Class<?> clazz);
 
+	public boolean doValidate();
+
 	public MediaResolverFactory getMediaResolverFactory(Class<?> clazz);
 
 	public void close();

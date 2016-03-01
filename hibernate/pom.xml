@@ -21,7 +21,6 @@
   	<dependency>
   		<groupId>com.tj</groupId>
   		<artifactId>ODataFramework-core</artifactId>
-  		<version>0.0.2-SNAPSHOT</version>
   	</dependency>
   </dependencies>
 </project>

@@ -36,8 +36,10 @@ public class RequestContext {
 		this.keys = map;
 		this.user = user;
 		this.securityManager = manager;
-		for (Object o : objects) {
-			context.put(o.getClass(), o);
+		if (objects != null) {
+			for (Object o : objects) {
+				context.put(o.getClass(), o);
+			}
 		}
 		context.put(SecurityManager.class, manager);
 		context.put(User.class, user);
@@ -48,9 +50,11 @@ public class RequestContext {
 			CompositeSecurityManager manager, User user) {
 		this(headers, objects, null, null, request, manager, user);
 	}
+
 	public QueryInfo getQueryInfo() {
 		return getContextObjectOfType(QueryInfo.class);
 	}
+
 	public String getRawHeader(String name) {
 		if (name == null) {
 			return null;
@@ -88,6 +92,10 @@ public class RequestContext {
 			return Byte.parseByte(headerVal);
 		}
 		throw new RuntimeException();
+	}
+
+	public HttpServletRequest getRawRequest() {
+		return requestContext;
 	}
 
 	public KeyMap getKeyMap() {
@@ -136,13 +144,15 @@ public class RequestContext {
 	public User getUser() {
 		return user;
 	}
-	public static RequestContext createRequestContext(ODataContext ocontext,OEntityKey key, Object entity, Class<?> type,
-					HttpServletRequest requestContext, CompositeSecurityManager manager, User user) {
-				List<Object> objects = new ArrayList<Object>();
-				objects.add(entity);
-				KeyMap map = KeyMap.fromOEntityKey(key);
-				return new RequestContext(null, objects, entity, map, requestContext, manager, user);
+
+	public static RequestContext createRequestContext(ODataContext ocontext, OEntityKey key, Object entity,
+			Class<?> type, HttpServletRequest requestContext, CompositeSecurityManager manager, User user) {
+		List<Object> objects = new ArrayList<Object>();
+		objects.add(entity);
+		KeyMap map = KeyMap.fromOEntityKey(key);
+		return new RequestContext(null, objects, entity, map, requestContext, manager, user);
 	}
+
 	public static RequestContext createRequestContext(ODataContext ocontext, Object entity, Class<?> type,
 			HttpServletRequest requestContext, CompositeSecurityManager manager, User user) {
 		List<Object> objects = new ArrayList<Object>();
@@ -154,7 +164,9 @@ public class RequestContext {
 	public static RequestContext createRequestContext(ODataContext ocontext, QueryInfo info, Class<?> type,
 			HttpServletRequest requestContext, CompositeSecurityManager manager, User user) {
 		List<Object> objects = new ArrayList<Object>();
-		objects.add(info);
+		if (info != null) {
+			objects.add(info);
+		}
 		return new RequestContext(mapFromODataContext(ocontext), objects, requestContext, manager, user);
 	}
 
@@ -172,12 +184,15 @@ public class RequestContext {
 		KeyMap map = KeyMap.fromOEntityKey(key);
 		return new RequestContext(mapFromODataContext(ocontext), objects, null, map, requestContext, manager, user);
 	}
-	public static RequestContext createRequestContext(QueryInfo info,Class<?> type, CompositeSecurityManager manager, User user) {
-		return RequestContext.createRequestContext(null,info,type,null,manager,user);
+
+	public static RequestContext createRequestContext(QueryInfo info, Class<?> type, CompositeSecurityManager manager,
+			User user) {
+		return RequestContext.createRequestContext(null, info, type, null, manager, user);
 	}
+
 	private static Map<String, String> mapFromODataContext(ODataContext context) {
 		Map<String, String> ret = new HashMap<String, String>();
-		if(context==null) {
+		if (context == null) {
 			return ret;
 		}
 		ODataHeadersContext headers = context.getRequestHeadersContext();

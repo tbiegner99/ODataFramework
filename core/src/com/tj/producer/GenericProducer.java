@@ -2,6 +2,8 @@ package com.tj.producer;
 
 import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -9,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.servlet.http.HttpServletRequest;
 
 import org.odata4j.core.OCollection;
@@ -55,18 +59,23 @@ import com.tj.datastructures.PropertyPath;
 import com.tj.exceptions.IllegalAccessException;
 import com.tj.exceptions.IllegalOperationException;
 import com.tj.exceptions.IllegalRequestException;
+import com.tj.exceptions.InvalidConfigurationException;
 import com.tj.exceptions.NoLoginException;
 import com.tj.exceptions.NotFoundException;
 import com.tj.odata.extensions.EdmJavaTypeConverter;
 import com.tj.odata.functions.FunctionInfo;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
 import com.tj.odata.service.Service;
+import com.tj.producer.annotations.entity.CreateDate;
+import com.tj.producer.annotations.entity.ParentLink;
+import com.tj.producer.annotations.entity.UpdateDate;
 import com.tj.producer.application.ApplicationMediaLinkExtensions;
 import com.tj.producer.configuration.AnnotationProducerConfiguration;
 import com.tj.producer.configuration.ProducerConfiguration;
 import com.tj.producer.configuration.ProducerConfiguration.Action;
 import com.tj.producer.configuration.ServiceProducerConfiguration;
 import com.tj.producer.util.ReflectionUtil;
+import com.tj.producer.validation.BeanValidator;
 import com.tj.security.CompositeSecurityManager;
 import com.tj.security.FunctionSecurityManager;
 import com.tj.security.user.User;
@@ -410,15 +419,79 @@ public class GenericProducer implements UserAwareODataProducer {
 	public void close() {
 	}
 
-	private Map<String, Object> getRelatedEntities(OEntity entity, EdmEntityType edmSet, ODataContext ocontext) {
+	private void linkRelatedEntitiesToParent(Object entityObject, Map<String, Object> relatedEntities) {
+		if (entityObject == null) {
+			return;
+		}
+		List<Field> fields = ReflectionUtil.getFieldsWithAnyAnnotation(entityObject.getClass(), OneToMany.class,
+				OneToOne.class, ParentLink.class);
+		for (Field f : fields) {
+			Object ref = relatedEntities.get(f.getName());
+			if (ref == null) {
+				continue;
+			}
+			Collection<?> children;
+			if (Collection.class.isAssignableFrom(ref.getClass())) {
+				children = (Collection<?>) ref;
+			} else {
+				children = Arrays.asList(ref);
+			}
+			for (Object child : children) {
+				String childParentRef = null;
+				try {
+					if (f.isAnnotationPresent(ParentLink.class)) {
+						childParentRef = f.getAnnotation(ParentLink.class).mappedBy();
+					} else if (f.isAnnotationPresent(OneToMany.class)) {
+						childParentRef = f.getAnnotation(OneToMany.class).mappedBy();
+					} else if (f.isAnnotationPresent(OneToOne.class)) {
+						childParentRef = f.getAnnotation(OneToOne.class).mappedBy();
+					}
+					if (childParentRef == null || childParentRef.isEmpty()) {
+						continue;
+					}
+					Field field = child.getClass().getDeclaredField(childParentRef);
+					field.setAccessible(true);
+					field.set(child, entityObject);
+				} catch (NoSuchFieldException e) {
+					throw new InvalidConfigurationException("Field " + f.getName()
+							+ " has an illegal mapped by attribute "
+							+ childParentRef + ": No such field.", e);
+				} catch (SecurityException | java.lang.IllegalAccessException e) {
+					throw new InvalidConfigurationException("Field " + f.getName() + " is not acessible", e);
+				} catch (IllegalArgumentException e) {
+					throw new InvalidConfigurationException("Field " + f.getName()
+							+ " has an illegal mapped by attribute "
+							+ childParentRef + ": Type of field should be parent type ("
+							+ entityObject.getClass().getName() + ").", e);
+				}
+			}
+		}
+	}
+
+	private Map<String, Object> getRelatedEntities(OEntity entity, EdmEntityType edmSet, ODataContext ocontext,
+			List<Class<? extends Annotation>> annotations) {
 		Map<String, Object> relatedEntities = new HashMap<String, Object>();
 		// handle collections, handle inlined elements
 		for (OLink link : entity.getLinks()) {
 			String linkEntitySet = edmSet.findNavigationProperty(link.getRelation()).getToRole().getType().getName();
 			Class<?> linkType = cfg.getEntitySetClass(linkEntitySet);
 			if (link.isInline()) {
-				OEntity inlineEntity = link.getRelatedEntity();
-				Object relatedObject = OEntityConverter.oEntityToObject(inlineEntity, linkType);
+				Object relatedObject = null;
+				if (link.isCollection()) {
+					ArrayList<Object> collection = new ArrayList<Object>();
+					for (OEntity inlineEntity : link.getRelatedEntities()) {
+						Class<?> type = cfg.getEntitySetClass(inlineEntity.getEntitySetName());
+						EdmEntityType linkEdmSet = inlineEntity.getEntityType();
+						Map<String, Object> relatedLinkEntities = getRelatedEntities(inlineEntity, linkEdmSet,
+								ocontext, annotations);
+						collection.add(OEntityConverter.oEntityToObject(inlineEntity, type, relatedLinkEntities,
+								annotations, cfg.doValidate()));
+					}
+					relatedObject = collection;
+				} else {
+					OEntity inlineEntity = link.getRelatedEntity();
+					relatedObject = OEntityConverter.oEntityToObject(inlineEntity, linkType, cfg.doValidate());
+				}
 				relatedEntities.put(link.getRelation(), relatedObject);
 			} else {
 				OEntityKey key = OEntityConverter.getKeyFromHref(link.getHref());
@@ -443,11 +516,16 @@ public class GenericProducer implements UserAwareODataProducer {
 		if (type == null) {
 			throw new NotFoundException();
 		}
-
-		Map<String, Object> relatedEntities = getRelatedEntities(entity, edmSet, ocontext);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type, relatedEntities);
+		List<Class<? extends Annotation>> annotations = Arrays.asList(CreateDate.class, UpdateDate.class);
+		Map<String, Object> relatedEntities = getRelatedEntities(entity, edmSet, ocontext, annotations);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, type, relatedEntities, annotations,
+				cfg.doValidate());
+		linkRelatedEntitiesToParent(entityObject, relatedEntities);
 		if (!canPerformEntityAcion(ocontext, Action.CREATE, type, entityObject)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
+		}
+		if (cfg.doValidate()) {
+			BeanValidator.validate(entityObject);
 		}
 		RequestContext context = RequestContext.createRequestContext(ocontext, entityObject, type, requestContext,
 				securityManager, requestUser);
@@ -472,12 +550,19 @@ public class GenericProducer implements UserAwareODataProducer {
 		Object entityToUpdate = cfg.invoke(entitySetName, Action.GET, context, responseContext);
 
 		// create linked entity
-		Map<String, Object> relatedEntities = getRelatedEntities(entity, linkEntityType, ocontext);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, linkType, relatedEntities);
-
+		List<Class<? extends Annotation>> annotations = Arrays.asList(CreateDate.class, UpdateDate.class);
+		Map<String, Object> relatedEntities = getRelatedEntities(entity, linkEntityType, ocontext, annotations);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, linkType, relatedEntities, annotations,
+				cfg.doValidate());
+		linkRelatedEntitiesToParent(entityObject, relatedEntities);
+		linkChildToParent(type, navProp, entityObject, entityToUpdate);
+		OEntityConverter.setUpdateDate(entityToUpdate);
 		if (!canPerformEntityAcion(ocontext, Action.CREATE, linkType, entityObject)
 				|| !canPerformEntityAcion(ocontext, Action.UPDATE, type, entityToUpdate)) {
 			throw new IllegalAccessException("user does not have permission to perform this action");
+		}
+		if (cfg.doValidate()) {
+			BeanValidator.validate(entityObject);
 		}
 		context = RequestContext.createRequestContext(ocontext, entityObject, linkType, requestContext,
 				securityManager, requestUser);
@@ -489,6 +574,27 @@ public class GenericProducer implements UserAwareODataProducer {
 		Object o = cfg.invoke(entitySetName, Action.UPDATE, context, responseContext);
 		OEntity response = OEntityConverter.createOEntity(getMetadata(), o, cfg, requestUser);
 		return Responses.entity(response);
+	}
+
+	private void linkChildToParent(Class<?> parentType, String navProp, Object childObject, Object parentObject) {
+		Field f;
+		try {
+			f = ReflectionUtil.getFieldForType(parentType, navProp);
+		} catch (NoSuchFieldException e) {
+			throw new BadRequestException("No such field: " + navProp);
+		}
+		String childParentRef = null;
+		if (f.isAnnotationPresent(ParentLink.class)) {
+			childParentRef = f.getAnnotation(ParentLink.class).mappedBy();
+		} else if (f.isAnnotationPresent(OneToMany.class)) {
+			childParentRef = f.getAnnotation(OneToMany.class).mappedBy();
+		} else if (f.isAnnotationPresent(OneToOne.class)) {
+			childParentRef = f.getAnnotation(OneToOne.class).mappedBy();
+		}
+		if (childParentRef == null) {
+			return;
+		}
+		ReflectionUtil.setField(childObject, childParentRef, parentObject);
 	}
 
 	@Override
@@ -509,20 +615,25 @@ public class GenericProducer implements UserAwareODataProducer {
 
 	private void updateEntity(ODataContext ocontext, String entitySetName, OEntity entity, boolean isMerge) {
 		Class<?> type = cfg.getEntitySetClass(entitySetName);
-		Map<String, Object> relatedEntities = getRelatedEntities(entity, entity.getEntityType(), ocontext);
-		Object entityObject = OEntityConverter.oEntityToObject(entity, type, relatedEntities);
-
-		if (!canPerformEntityAcion(ocontext, (isMerge ? Action.PATCH : Action.UPDATE), type, entityObject)) {
-			throw new IllegalAccessException("user does not have permission to perform this action");
-		}
+		List<Class<? extends Annotation>> annotations = Arrays.asList(CreateDate.class, UpdateDate.class);
+		Map<String, Object> relatedEntities = getRelatedEntities(entity, entity.getEntityType(), ocontext, annotations);
+		Object entityObject = OEntityConverter.oEntityToObject(entity, type, relatedEntities, annotations,
+				cfg.doValidate());
+		linkRelatedEntitiesToParent(entityObject, relatedEntities);
 		RequestContext context = RequestContext.createRequestContext(ocontext, entity.getEntityKey(), entityObject,
 				type, requestContext, securityManager, requestUser);
 		Object target = cfg.invoke(entitySetName, Action.GET, context, responseContext);
+		if (!canPerformEntityAcion(ocontext, (isMerge ? Action.PATCH : Action.UPDATE), type, target)) {
+			throw new IllegalAccessException("user does not have permission to perform this action");
+		}
 		ObjectMerger mergeMethod = new ObjectMerger();
 		if (isMerge) {
 			mergeMethod.mergeObjects(entityObject, target);
 		} else {
 			mergeMethod.updateObjects(entityObject, target);
+		}
+		if (cfg.doValidate()) {
+			BeanValidator.validate(entityObject);
 		}
 		// mergeMethod.setKeyProperties(KeyMap.fromOEntityKey(entity.getEntityKey()), target);
 		context = RequestContext.createRequestContext(ocontext, entity.getEntityKey(), target, type, requestContext,
@@ -615,7 +726,7 @@ public class GenericProducer implements UserAwareODataProducer {
 				parameters.put(vals.getKey(), value);
 			} else {
 				Class<?> type = cfg.getEntitySetClass(p.getType().getFullyQualifiedTypeName());
-				Object obj = OEntityConverter.oEntityToObject((OStructuralObject) p.getValue(), type);
+				Object obj = OEntityConverter.oEntityToObject((OStructuralObject) p.getValue(), type, cfg.doValidate());
 				parameters.put(vals.getKey(), obj);
 			}
 		}
@@ -632,8 +743,9 @@ public class GenericProducer implements UserAwareODataProducer {
 			// use security manager to translate returned value into allowed return object
 			ret = security.getReturnValue(ret, requestUser);
 		}
-		// TODO: handle null?
-		if (name.getReturnType().isSimple()) {
+		if (name.getReturnType() == null) {
+			return Responses.simple(EdmSimpleType.STRING, "message", "The function operation completed successfully.");
+		} else if (name.getReturnType().isSimple()) {
 			return Responses.simple((EdmSimpleType<?>) name.getReturnType(), "result", ret);
 		} else if (name.getReturnType() instanceof EdmCollectionType) {
 			OCollection<?> items = OEntityConverter.getCollection(getMetadata(),
@@ -655,6 +767,9 @@ public class GenericProducer implements UserAwareODataProducer {
 		// if (name.getReturnType() != o.getClass()) {
 		// throw new UnexpectedException("");
 		// }
+		if (ret == null) {
+			return Responses.simple(EdmSimpleType.STRING, "result", null);
+		}
 		return Responses.entity(OEntityConverter.createOEntity(getMetadata(), ret, queryInfo, cfg, requestUser));
 	}
 

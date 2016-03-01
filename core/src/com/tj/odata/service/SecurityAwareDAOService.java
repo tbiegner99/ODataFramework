@@ -81,21 +81,23 @@ public class SecurityAwareDAOService<T> extends AbstractService<T> implements Se
 	}
 
 	@Override
-	public T linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey, String property, Object newLink) {
+	public T linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey,
+			String property, Object newLink) {
 		try {
-			SecurityManager<T, ?> security=(SecurityManager<T, ?>) request.getSecurityManager(type);
+			SecurityManager<T, ?> security = (SecurityManager<T, ?>) request.getSecurityManager(type);
 			User user = request.getUser();
-			T object=dao.getEntity(objectKey,security,user);
-			Field f=ReflectionUtil.getFieldForType(object.getClass(), property);
-			if(Collection.class.isAssignableFrom(f.getType())) {
-				((Collection)ReflectionUtil.invokeGetter(object, property)).add(newLink);
+			T object = dao.getEntity(objectKey, security, user);
+			Field f = ReflectionUtil.getFieldForType(object.getClass(), property);
+			if (Collection.class.isAssignableFrom(f.getType())) {
+				((Collection) ReflectionUtil.invokeGetter(object, property)).add(newLink);
 			} else {
 				ReflectionUtil.invokeSetter(object, property, newLink);
 			}
-			dao.updateEntity(object, objectKey,security,user);
+			dao.updateEntity(object, objectKey, security, user);
 			return object;
 		} catch (NoSuchFieldException e) {
 			throw new IllegalRequestException("");
 		}
 	}
+
 }

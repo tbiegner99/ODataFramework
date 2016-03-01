@@ -37,6 +37,7 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 	private Map<Class<?>, MediaResolverFactory> mediaEntities;
 	private int maxResults = 500;
 	private boolean useProxy = false;
+	private boolean validationEnabled = true;
 	private EdmDataServices metadata;
 	private GenericEdmGenerator edm;
 	private CompositeSecurityManager securityManager;
@@ -79,6 +80,18 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 		for (Class<?> clazz : fact.getSupportedClasses()) {
 			mediaEntities.put(clazz, fact);
 		}
+	}
+
+	public boolean doValidate() {
+		return validationEnabled;
+	}
+
+	public boolean isValidationEnabled() {
+		return validationEnabled;
+	}
+
+	public void setValidationEnabled(boolean validationEnabled) {
+		this.validationEnabled = validationEnabled;
 	}
 
 	public void setServices(Collection<? extends Service<?>> services) {
@@ -138,11 +151,14 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 
 	private void setUp(Collection<? extends Service<?>> services2) {
 		for (Service<?> s : services2) {
+			s.setConfiguration(this);
 			if (s instanceof CompositeService) {
 				CompositeService service = (CompositeService) s;
 				for (Class<?> clazz : service.getTypes()) {
 					classes.put(clazz.getSimpleName(), clazz);
-					if (s instanceof ProxyService<?> || !useProxy) {
+					boolean addProxy = (service instanceof ProxyService<?>)
+							&& (useProxy || ((ProxyService<?>) service).isUseProxy());
+					if (addProxy) {
 						services.put(clazz, ((ProxyService<?>) service).getProxy());
 					} else {
 						services.put(clazz, service);
@@ -155,7 +171,8 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 				classes.put(clazz.getSimpleName(), clazz);
 				if (s instanceof ProxyService<?>) {
 					Service<?> service = ((ProxyService<?>) s).getProxy();
-					if (service == null || !useProxy) {
+					boolean serviceUseProxy = ((ProxyService<?>) s).isUseProxy();
+					if (service == null || (!useProxy && !serviceUseProxy)) {
 						service = s;
 					}
 					services.put(clazz, service);
@@ -260,8 +277,8 @@ public class ServiceProducerConfiguration implements ProducerConfiguration {
 		this.maxResults = maxResults;
 	}
 
-	public Service<?> getServiceForClass(Class<?> clazz) {
-		return services.get(clazz);
+	public <T> Service<T> getServiceForClass(Class<T> clazz) {
+		return (Service<T>) services.get(clazz);
 	}
 
 	@Override

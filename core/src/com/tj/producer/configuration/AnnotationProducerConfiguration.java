@@ -7,20 +7,15 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import org.hibernate.cfg.NotYetImplementedException;
-import org.odata4j.core.NamedValue;
-import org.odata4j.core.OEntityKey;
-import org.odata4j.core.OEntityKey.KeyType;
 import org.odata4j.edm.EdmDataServices;
 import org.odata4j.edm.EdmGenerator;
 
 import com.tj.odata.functions.FunctionInfo;
 import com.tj.odata.functions.FunctionInfo.FunctionName;
-import com.tj.producer.EntityKey;
 import com.tj.producer.GenericEdmGenerator;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
@@ -42,8 +37,9 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 	private Map<FunctionName, FunctionInfo> functions;
 	private Map<FunctionName, Invoker> functionInvokers;
 	private Map<Class<?>, MediaResolverFactory> mediaEntities;
-	private int maxResults=500;
+	private int maxResults = 500;
 	private EdmGenerator edm;
+	private boolean validationEnabled = true;
 	private EdmDataServices metadata;
 	private CompositeSecurityManager securityManager;
 
@@ -57,28 +53,27 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 		setUpConfig(services);
 		refreshMetadata();
 	}
-	public AnnotationProducerConfiguration(List<Object> services,CompositeSecurityManager securityManager) {
+
+	public AnnotationProducerConfiguration(List<Object> services, CompositeSecurityManager securityManager) {
 		this(services);
-		this.securityManager=securityManager;
+		this.securityManager = securityManager;
+	}
+
+	public boolean doValidate() {
+		return validationEnabled;
+	}
+
+	public boolean isValidationEnabled() {
+		return validationEnabled;
+	}
+
+	public void setValidationEnabled(boolean validationEnabled) {
+		this.validationEnabled = validationEnabled;
 	}
 
 	@Override
 	public Class<?> getEntitySetClass(String entitySetName) {
 		return edmTypes.get(entitySetName);
-	}
-
-	public EntityKey convertToKey(String entitySetName, OEntityKey key) {
-		EntityKey ck = new EntityKey();
-		if (key.getKeyType() == KeyType.SINGLE) {
-			ck.put(EntityKey.SIMPLE_KEY, key.asSingleValue());
-		} else {
-			Iterator<NamedValue<?>> it = key.asComplexValue().iterator();
-			while (it.hasNext()) {
-				NamedValue<?> nv = it.next();
-				ck.put(nv.getName(), nv.getValue());
-			}
-		}
-		return ck;
 	}
 
 	@Override
@@ -278,7 +273,7 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public Object invoke(FunctionName name, Map<String, Object> parameters, RequestContext request,
-			ResponseContext response,ProducerConfiguration config) {
+			ResponseContext response, ProducerConfiguration config) {
 		if (!hasFunction(name)) {
 			throw new IllegalArgumentException("Function not found: " + name.getName());
 		}
@@ -304,7 +299,6 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 		return maxResults;
 	}
 
-
 	@Override
 	public void setMaxResults(int maxResults) {
 		this.maxResults = maxResults;
@@ -322,7 +316,7 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public EdmDataServices getMetadata() {
-		if(metadata==null) {
+		if (metadata == null) {
 			refreshMetadata();
 		}
 		return metadata;
@@ -330,13 +324,14 @@ public class AnnotationProducerConfiguration implements ProducerConfiguration {
 
 	@Override
 	public EdmDataServices refreshMetadata() {
-		edm=new GenericEdmGenerator(this);
-		metadata=edm.generateEdm(null).build();
+		edm = new GenericEdmGenerator(this);
+		metadata = edm.generateEdm(null).build();
 		return getMetadata();
 	}
+
 	@Override
 	public void setSecurityManager(CompositeSecurityManager securityManager) {
-		this.securityManager=securityManager;
+		this.securityManager = securityManager;
 
 	}
 

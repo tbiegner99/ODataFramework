@@ -1,6 +1,7 @@
 package com.tj.dao.hibernate;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -25,16 +26,25 @@ import com.tj.exceptions.IllegalRequestException;
 import com.tj.hibernate.dao.query.HibernateOrderBy;
 import com.tj.hibernate.dao.query.HibernateQuery;
 import com.tj.producer.KeyMap;
+import com.tj.producer.util.ReflectionUtil;
 import com.tj.security.SecurityManager;
 import com.tj.security.user.User;
 
+/***
+ * Supplies crud op
+ * 
+ * @author Admin
+ *
+ * @param <T>
+ */
 public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	private static final int DEFAULT_SKIP = 0;
 	private static final int DEFAULT_TOP = 500;
 	@Autowired(required = false)
 	private SessionFactory factory;
 	private Class<T> type;
-	private static Session session;
+	private Session session;
+	private boolean useFactory = true;
 
 	public GenericHibernateDAO(Class<T> type) {
 		this.type = type;
@@ -43,6 +53,13 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	public GenericHibernateDAO(Class<T> type, SessionFactory factory) {
 		this(type);
 		this.factory = factory;
+	}
+
+	public GenericHibernateDAO(Class<T> type2, Session session2) {
+		this(type2);
+		this.session = session2;
+		this.factory = session.getSessionFactory();
+		this.useFactory = false;
 	}
 
 	@Override
@@ -57,11 +74,13 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 	private Session getSession() {
 		// TODO: Implement scoped (thread specific) sessions with transactions
 		try {
-			session = factory.getCurrentSession();
+			if (factory != null && useFactory) {
+				session = factory.getCurrentSession();
+			}
 		} catch (Exception e) {
 			// TODO: log;
 		}
-		if (session == null) {// || !session.isOpen()) {
+		if (session == null && factory != null) {// || !session.isOpen()) {
 			session = factory.openSession();
 		}
 		return session;
@@ -86,6 +105,7 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		if (meta == null) {
 			return;
 		}
+		getSession().saveOrUpdate(entity);
 		for (String property : meta.getPropertyNames()) {
 			Object value = meta.getPropertyValue(entity, property);
 			if (value == null) {
@@ -101,7 +121,7 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 				}
 			}
 		}
-		getSession().saveOrUpdate(entity);
+
 	}
 
 	@Override
@@ -134,6 +154,19 @@ public class GenericHibernateDAO<T> implements SecurityAwareDAO<T> {
 		Object key = null;
 		if (entityKey.isSingleKey()) {
 			key = entityKey.getSingleKey();
+		} else {
+			ClassMetadata metadata = this.getSession().getSessionFactory().getClassMetadata(type);
+			Class<?> idType = metadata.getIdentifierType().getReturnedClass();
+			try {
+				key = ReflectionUtil.newDefaultInstance(idType);
+				for (String str : entityKey.getComplexProperties()) {
+					ReflectionUtil.setField(key, str, entityKey.getKey(str));
+				}
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
+				throw new IllegalRequestException("Entity has an illegal key type.");
+			}
+
 		}
 		T object = (T) getSession().get(type, (Serializable) key);
 		if (object == null) {

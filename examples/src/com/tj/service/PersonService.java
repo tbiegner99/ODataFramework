@@ -10,6 +10,7 @@ import com.tj.odata.service.Service;
 import com.tj.producer.KeyMap;
 import com.tj.producer.RequestContext;
 import com.tj.producer.ResponseContext;
+import com.tj.producer.configuration.ServiceProducerConfiguration;
 import com.tj.sample.model.Person;
 
 public class PersonService implements Service<Person> {
@@ -62,9 +63,22 @@ public class PersonService implements Service<Person> {
 	}
 
 	@Override
-	public Person linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey, String property, Object newLink) {
+	public Person linkNewEntity(Class<?> type, RequestContext request, ResponseContext response, KeyMap objectKey,
+			String property, Object newLink) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public ServiceProducerConfiguration getConfiguration() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setConfiguration(ServiceProducerConfiguration configuration) {
+		// TODO Auto-generated method stub
+
 	}
 
 }
