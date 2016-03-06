@@ -5,9 +5,10 @@
   <version>0.0.2-SNAPSHOT</version>
   <packaging>pom</packaging>
   <modules>
+    <module>annotations</module>
   	<module>core</module>
   	
-  	<module>annotations</module>
+
   	<module>hibernate</module>
   	
   </modules>
